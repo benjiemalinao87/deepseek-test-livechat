@@ -60,7 +60,7 @@ export const TestChat = () => {
     };
 
     try {
-      const response = await fetch('http://localhost:3001/send-sms', {
+      const response = await fetch('https://cc.automate8.com/send-sms', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -68,7 +68,9 @@ export const TestChat = () => {
         body: JSON.stringify(messageData),
       });
 
-      if (!response.ok) throw new Error('Failed to send message');
+      const data = await response.json();
+      
+      if (!response.ok) throw new Error(data.error || 'Failed to send message');
 
       setMessage('');
       toast({
@@ -81,7 +83,7 @@ export const TestChat = () => {
       console.error('Error sending message:', error);
       toast({
         title: 'Error',
-        description: 'Failed to send message',
+        description: error.message || 'Failed to send message',
         status: 'error',
         duration: 3000,
       });
