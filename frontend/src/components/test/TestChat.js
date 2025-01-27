@@ -24,6 +24,15 @@ import {
   MenuItem,
   useColorMode,
   useColorModeValue,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalCloseButton,
+  FormControl,
+  FormLabel,
+  Plus,
 } from '@chakra-ui/react';
 import { socket } from '../../socket';
 import { SearchIcon, ChevronDownIcon, CloseIcon } from '@chakra-ui/icons';
@@ -35,6 +44,34 @@ export const TestChat = () => {
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState([]);
   const [isConnected, setIsConnected] = useState(false);
+  const [contacts, setContacts] = useState([
+    {
+      id: 1,
+      name: 'Test User',
+      phone: '+16267888830',
+      avatar: 'TU',
+      lastMessage: 'No messages yet',
+      time: '2m ago'
+    },
+    {
+      id: 2,
+      name: 'Test User2',
+      phone: '+16265539681',
+      avatar: 'TU2',
+      lastMessage: 'No messages yet',
+      time: '1m ago'
+    },
+    {
+      id: 3,
+      name: 'Test User3',
+      phone: '+16265539682',
+      avatar: 'TU3',
+      lastMessage: 'No messages yet',
+      time: 'Just now'
+    }
+  ]);
+  const [isNewContactModalOpen, setIsNewContactModalOpen] = useState(false);
+  const [newContact, setNewContact] = useState({ name: '', phone: '' });
   const toast = useToast();
   const { colorMode } = useColorMode();
   const isDark = colorMode === 'dark';
@@ -164,6 +201,39 @@ export const TestChat = () => {
     }
   };
 
+  const handleAddContact = () => {
+    if (!newContact.name || !newContact.phone) {
+      toast({
+        title: 'Error',
+        description: 'Please fill in both name and phone number',
+        status: 'error',
+        duration: 3000,
+      });
+      return;
+    }
+
+    const newContactData = {
+      id: contacts.length + 1,
+      name: newContact.name,
+      phone: newContact.phone,
+      avatar: newContact.name.split(' ').map(n => n[0]).join('').toUpperCase(),
+      lastMessage: 'No messages yet',
+      time: 'Just now'
+    };
+
+    setContacts(prev => [...prev, newContactData]);
+    setNewContact({ name: '', phone: '' });
+    setIsNewContactModalOpen(false);
+    setPhone(newContactData.phone); // Select the new contact
+
+    toast({
+      title: 'Contact added',
+      description: `${newContactData.name} has been added to your contacts`,
+      status: 'success',
+      duration: 3000,
+    });
+  };
+
   const ResizeHandle = () => (
     <PanelResizeHandle className="ResizeHandleOuter">
       <Box 
@@ -188,18 +258,27 @@ export const TestChat = () => {
         <Panel defaultSize={20} minSize={15}>
           <VStack h="100%" spacing={0} borderRight="1px" borderColor={borderColor}>
             <Box p={4} w="100%" borderBottom="1px" borderColor={borderColor}>
-              <InputGroup>
-                <InputLeftElement pointerEvents="none">
-                  <SearchIcon color={mutedTextColor} />
-                </InputLeftElement>
-                <Input
-                  placeholder="Search conversations"
-                  variant="filled"
-                  bg={inputBg}
-                  _focus={{ bg: isDark ? 'gray.600' : 'white' }}
-                  color={textColor}
+              <HStack spacing={4}>
+                <InputGroup>
+                  <InputLeftElement pointerEvents="none">
+                    <SearchIcon color={mutedTextColor} />
+                  </InputLeftElement>
+                  <Input
+                    placeholder="Search conversations"
+                    variant="filled"
+                    bg={inputBg}
+                    _focus={{ bg: isDark ? 'gray.600' : 'white' }}
+                    color={textColor}
+                  />
+                </InputGroup>
+                <IconButton
+                  icon={<Plus />}
+                  onClick={() => setIsNewContactModalOpen(true)}
+                  colorScheme="blue"
+                  variant="ghost"
+                  aria-label="Add new contact"
                 />
-              </InputGroup>
+              </HStack>
             </Box>
             
             <Box p={2} w="100%">
@@ -224,27 +303,31 @@ export const TestChat = () => {
             </Box>
 
             <VStack flex={1} w="100%" overflowY="auto" spacing={0} align="stretch">
-              {/* Contact Item */}
-              <Box 
-                p={3} 
-                _hover={{ bg: isDark ? 'gray.700' : 'gray.50' }} 
-                cursor="pointer"
-                bg={phone ? (isDark ? 'gray.700' : 'blue.50') : 'transparent'}
-                onClick={() => setPhone('+16267888830')}
-              >
-                <HStack spacing={3}>
-                  <Avatar size="sm" name="Test User" />
-                  <Box flex={1}>
-                    <HStack justify="space-between">
-                      <Text fontWeight="medium" color={textColor}>Test User</Text>
-                      <Text fontSize="xs" color={mutedTextColor}>2m ago</Text>
-                    </HStack>
-                    <Text fontSize="sm" color={mutedTextColor} noOfLines={1}>
-                      {messages[messages.length - 1]?.message || 'No messages yet'}
-                    </Text>
-                  </Box>
-                </HStack>
-              </Box>
+              {contacts.map((contact) => (
+                <Box 
+                  key={contact.id}
+                  p={3} 
+                  _hover={{ bg: isDark ? 'gray.700' : 'gray.50' }} 
+                  cursor="pointer"
+                  bg={phone === contact.phone ? (isDark ? 'gray.700' : 'blue.50') : 'transparent'}
+                  onClick={() => setPhone(contact.phone)}
+                >
+                  <HStack spacing={3}>
+                    <Avatar size="sm" name={contact.name} bg="purple.500">
+                      {contact.avatar}
+                    </Avatar>
+                    <Box flex={1}>
+                      <HStack justify="space-between">
+                        <Text fontWeight="medium" color={textColor}>{contact.name}</Text>
+                        <Text fontSize="xs" color={mutedTextColor}>{contact.time}</Text>
+                      </HStack>
+                      <Text fontSize="sm" color={mutedTextColor} noOfLines={1}>
+                        {messages.filter(m => m.to === contact.phone || m.from === contact.phone).slice(-1)[0]?.message || contact.lastMessage}
+                      </Text>
+                    </Box>
+                  </HStack>
+                </Box>
+              ))}
             </VStack>
           </VStack>
         </Panel>
@@ -261,7 +344,7 @@ export const TestChat = () => {
                   <Avatar size="sm" name="Test User" />
                   <Box>
                     <Text fontWeight="medium" color={textColor}>Test User</Text>
-                    <HStack spacing={2}>
+                    <HStack justify="center" mt={2} spacing={2}>
                       <Badge colorScheme="green">CUSTOMER</Badge>
                       <Badge colorScheme="blue">OPEN</Badge>
                     </HStack>
@@ -406,5 +489,41 @@ export const TestChat = () => {
         </Panel>
       </PanelGroup>
     </Box>
+
+    {/* New Contact Modal */}
+    <Modal isOpen={isNewContactModalOpen} onClose={() => setIsNewContactModalOpen(false)}>
+      <ModalOverlay />
+      <ModalContent bg={bg}>
+        <ModalHeader color={textColor}>Add New Contact</ModalHeader>
+        <ModalCloseButton color={textColor} />
+        <ModalBody pb={6}>
+          <VStack spacing={4}>
+            <FormControl>
+              <FormLabel color={textColor}>Name</FormLabel>
+              <Input
+                placeholder="Enter contact name"
+                value={newContact.name}
+                onChange={(e) => setNewContact(prev => ({ ...prev, name: e.target.value }))}
+                bg={inputBg}
+                color={textColor}
+              />
+            </FormControl>
+            <FormControl>
+              <FormLabel color={textColor}>Phone</FormLabel>
+              <Input
+                placeholder="Enter phone number"
+                value={newContact.phone}
+                onChange={(e) => setNewContact(prev => ({ ...prev, phone: e.target.value }))}
+                bg={inputBg}
+                color={textColor}
+              />
+            </FormControl>
+            <Button colorScheme="blue" w="100%" onClick={handleAddContact}>
+              Add Contact
+            </Button>
+          </VStack>
+        </ModalBody>
+      </ModalContent>
+    </Modal>
   );
 };
