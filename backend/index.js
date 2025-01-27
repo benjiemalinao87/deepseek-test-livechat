@@ -8,42 +8,43 @@ require('dotenv').config();
 const app = express();
 const server = http.createServer(app);
 
-// Configure CORS for both Express and Socket.IO
-const corsOptions = {
-  origin: [
-    "https://cc1.automate8.com",  // Frontend
-    "http://localhost:3000"       // Local development
-  ],
-  methods: ['GET', 'POST', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+// Configure CORS
+app.use(cors({
+  origin: ["https://cc1.automate8.com", "http://localhost:3000"],
+  methods: ["GET", "POST", "OPTIONS"],
   credentials: true,
-  optionsSuccessStatus: 204
-};
+  allowedHeaders: ["Content-Type", "Authorization"]
+}));
 
-// Enable CORS for Express
-app.use(cors(corsOptions));
+// Body parsing middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Socket.IO setup
+// Socket.IO setup with detailed logging
 const io = new Server(server, {
   cors: {
     origin: ["https://cc1.automate8.com", "http://localhost:3000"],
     methods: ["GET", "POST"],
-    credentials: true
+    credentials: true,
+    allowedHeaders: ["Content-Type", "Authorization"]
   },
   path: '/socket.io',
-  transports: ['websocket', 'polling']
+  transports: ['websocket', 'polling'],
+  pingTimeout: 60000,
+  pingInterval: 25000
 });
 
-// Socket connection handling
+// Socket connection handling with debug logs
 io.on('connection', (socket) => {
   console.log('🔌 New socket connection:', {
     id: socket.id,
     transport: socket.conn.transport.name,
-    headers: socket.handshake.headers,
+    query: socket.handshake.query,
     time: new Date().toISOString()
   });
+
+  // Debug event for testing socket connection
+  socket.emit('connection_test', { status: 'connected', socketId: socket.id });
 
   socket.on('disconnect', (reason) => {
     console.log('🔌 Socket disconnected:', {
@@ -127,82 +128,45 @@ app.post('/message-status', (req, res) => {
 // Twilio webhook for incoming messages
 app.post('/twilio', express.urlencoded({ extended: true }), (req, res) => {
   try {
-    // Log the entire request for debugging
-    console.log('🔍 Webhook Debug:', {
-      headers: req.headers,
-      rawBody: req.rawBody,
-      body: req.body,
-      method: req.method,
-      url: req.url,
-      contentType: req.headers['content-type']
-    });
-    
-    // Ensure we have the body data
-    if (!req.body || Object.keys(req.body).length === 0) {
-      console.error('❌ Empty request body');
-      res.status(400).send('<?xml version="1.0" encoding="UTF-8"?><Response></Response>');
-      return;
-    }
-    
-    // Log the specific message data
     console.log('📥 Received webhook from Twilio:', {
-      from: req.body.From,
-      to: req.body.To,
-      body: req.body.Body,
-      messageSid: req.body.MessageSid,
-      smsStatus: req.body.SmsStatus,
-      numMedia: req.body.NumMedia
+      body: req.body,
+      headers: req.headers,
+      timestamp: new Date().toISOString()
     });
-    
+
     const messageData = {
       from: req.body.From,
       to: req.body.To,
-      message: req.body.Body || '',  // Ensure message is not undefined
+      message: req.body.Body,
       timestamp: new Date().toISOString(),
       direction: 'inbound',
       messageSid: req.body.MessageSid,
       status: req.body.SmsStatus || 'received'
     };
-    
-    // Validate required fields
-    if (!messageData.from || !messageData.message) {
-      console.error('❌ Missing required fields:', messageData);
-      res.status(400).send('<?xml version="1.0" encoding="UTF-8"?><Response></Response>');
-      return;
-    }
-    
-    // Log connected socket clients
+
+    // Log connected sockets before broadcast
     const connectedSockets = Array.from(io.sockets.sockets.keys());
-    console.log('🔌 Socket Clients:', {
+    console.log('🔌 Active socket connections:', {
       count: connectedSockets.length,
-      socketIds: connectedSockets,
-      namespaces: Object.keys(io.nsps)
+      sockets: connectedSockets
     });
-    
-    // Check if we have any connected clients
-    if (connectedSockets.length === 0) {
-      console.warn('⚠️ No connected socket clients to broadcast to');
-    }
-    
-    // Broadcast to all connected clients
-    console.log('📡 Broadcasting message:', messageData);
-    io.emit('new_message', messageData);
-    
-    // Log successful broadcast
-    console.log('✅ Message broadcast complete');
+
+    // Broadcast with acknowledgment
+    io.emit('new_message', messageData, (error) => {
+      if (error) {
+        console.error('❌ Broadcast error:', error);
+      } else {
+        console.log('✅ Message broadcast successful');
+      }
+    });
 
     // Send TwiML response
     const twimlResponse = '<?xml version="1.0" encoding="UTF-8"?><Response></Response>';
     res.set('Content-Type', 'text/xml');
     res.send(twimlResponse);
-    
-    console.log('📤 Sent TwiML response');
+
   } catch (error) {
-    console.error('❌ Webhook Error:', {
-      error: error.message,
-      stack: error.stack,
-      body: req.body
-    });
+    console.error('❌ Webhook Error:', error);
     res.status(500).send('<?xml version="1.0" encoding="UTF-8"?><Response></Response>');
   }
 });

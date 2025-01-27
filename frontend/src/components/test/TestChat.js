@@ -31,18 +31,64 @@ export const TestChat = () => {
       setIsConnected(false);
     });
 
+    // Debug connection test
+    socket.on('connection_test', (data) => {
+      console.log('🔌 Connection test:', data);
+      toast({
+        title: 'Socket Connected',
+        description: `Socket ID: ${data.socketId}`,
+        status: 'success',
+        duration: 3000,
+      });
+    });
+
     // Listen for new messages
     socket.on('new_message', (data) => {
       console.log('📥 Received message:', data);
-      setMessages(prev => [...prev, data]);
+      
+      // Validate message data
+      if (!data || !data.message) {
+        console.warn('⚠️ Invalid message data:', data);
+        return;
+      }
+
+      // Add message to state
+      setMessages(prev => {
+        // Check for duplicates
+        const isDuplicate = prev.some(m => 
+          m.messageSid === data.messageSid || 
+          (m.timestamp === data.timestamp && m.message === data.message)
+        );
+        
+        if (isDuplicate) {
+          console.log('📝 Duplicate message, skipping');
+          return prev;
+        }
+
+        const newMessages = [...prev, data];
+        console.log('📝 Updated messages:', newMessages);
+        return newMessages;
+      });
+
+      // Show notification for inbound messages
+      if (data.direction === 'inbound') {
+        toast({
+          title: 'New Message',
+          description: `From: ${data.from}\n${data.message}`,
+          status: 'info',
+          duration: 3000,
+        });
+      }
     });
 
+    // Cleanup
     return () => {
       socket.off('connect');
       socket.off('disconnect');
+      socket.off('connection_test');
       socket.off('new_message');
     };
-  }, []);
+  }, [toast]);
 
   const handleSendMessage = async () => {
     if (!message || !phone) {
