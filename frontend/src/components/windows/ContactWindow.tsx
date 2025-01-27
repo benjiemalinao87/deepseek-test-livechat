@@ -18,7 +18,7 @@ export function ContactWindow() {
         phoneNumber: formData.phoneNumber,
       };
 
-      const apiUrl = process.env.REACT_APP_API_URL || 'https://cc.automate8.com';
+      const apiUrl = 'https://cc1.automate8.com';
       console.log('API URL:', apiUrl); // Debug log
 
       const response = await axios.post(`${apiUrl}/api/contacts`, contactData, {

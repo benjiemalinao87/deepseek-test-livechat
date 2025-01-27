@@ -32,16 +32,30 @@ export function MainLayout() {
     <Box
       minH="100vh"
       bg={bgColor}
-      backgroundImage="url('/images/wallpaper.jpg')"
+      backgroundImage="url('https://images.unsplash.com/photo-1506744038136-46273834b3fb?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80')"
       backgroundSize="cover"
       backgroundPosition="center"
       position="relative"
+      _before={{
+        content: '""',
+        position: 'absolute',
+        top: 0,
+        right: 0,
+        bottom: 0,
+        left: 0,
+        background: 'rgba(0, 0, 0, 0.3)',
+        zIndex: 0
+      }}
     >
       {/* Active Window */}
-      {renderWindow()}
+      <Box position="relative" zIndex={1}>
+        {renderWindow()}
+      </Box>
 
       {/* Dock */}
-      <Dock activeWindow={activeWindow} onWindowChange={setActiveWindow} />
+      <Box position="relative" zIndex={1}>
+        <Dock activeWindow={activeWindow} onWindowChange={setActiveWindow} />
+      </Box>
     </Box>
   );
 }
