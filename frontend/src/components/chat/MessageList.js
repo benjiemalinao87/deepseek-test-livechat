@@ -30,7 +30,7 @@ export const MessageList = ({ messages = [] }) => {
           const isOutbound = msg.direction === 'outbound';
           return (
             <Flex
-              key={msg.messageSid || index}
+              key={index}
               w="100%"
               justify={isOutbound ? 'flex-end' : 'flex-start'}
             >
@@ -55,9 +55,9 @@ export const MessageList = ({ messages = [] }) => {
                 <Text>{msg.message}</Text>
                 <Text 
                   fontSize="xs" 
-                  color={isOutbound ? 'blue.100' : 'gray.500'} 
-                  mt={1}
+                  color={isOutbound ? 'blue.100' : 'gray.500'}
                   textAlign="right"
+                  mt={1}
                 >
                   {new Date(msg.timestamp).toLocaleTimeString()}
                 </Text>

@@ -25,45 +25,31 @@ function App() {
 
   const isDark = colorMode === 'dark';
 
-  // Register phone number when user is selected or on reconnection
+  // Register phone number when user is selected
   useEffect(() => {
-    const registerPhones = () => {
-      if (selectedUser?.phone) {
-        const twilioNumber = '+13256665486';
-        console.log('📱 Registering numbers:', {
-          twilio: twilioNumber,
-          user: selectedUser.phone
-        });
-        
-        // Register both numbers to receive messages
-        socket.emit('register', twilioNumber);
-        socket.emit('register', selectedUser.phone);
-      }
-    };
-
-    // Initial registration
-    registerPhones();
-
-    // Re-register on reconnection
-    socket.on('connect', () => {
-      console.log('🔌 Socket reconnected, re-registering phones');
-      registerPhones();
-    });
-
-    socket.on('registered', (data) => {
-      console.log('✅ Number registered:', data);
-      toast({
-        title: 'Chat Ready',
-        description: `Connected to ${selectedUser.name}`,
-        status: 'success',
-        duration: 3000,
+    if (selectedUser?.phone) {
+      // Register the Twilio number to receive messages
+      const twilioNumber = '+13256665486';
+      console.log('📱 Registering numbers:', {
+        twilio: twilioNumber,
+        user: selectedUser.phone
       });
-    });
+      
+      // Register both numbers to receive messages
+      socket.emit('register', twilioNumber);
+      socket.emit('register', selectedUser.phone);
 
-    return () => {
-      socket.off('registered');
-      socket.off('connect');
-    };
+      socket.on('registered', (data) => {
+        console.log('✅ Number registered:', data);
+        toast({
+          title: 'Chat Ready',
+          description: `Connected to ${selectedUser.name}`,
+          status: 'success',
+          duration: 3000,
+        });
+      });
+    }
+    return () => socket.off('registered');
   }, [selectedUser, toast]);
 
   // Handle messages
@@ -114,6 +100,13 @@ function App() {
     socket.on('connect', () => {
       console.log('✅ Connected to socket');
       setConnected(true);
+
+      // Re-register numbers if user is selected
+      if (selectedUser?.phone) {
+        const twilioNumber = '+13256665486';
+        socket.emit('register', twilioNumber);
+        socket.emit('register', selectedUser.phone);
+      }
     });
 
     socket.on('disconnect', () => {
@@ -130,56 +123,76 @@ function App() {
       socket.off('connect');
       socket.off('disconnect');
     };
-  }, [toast]);
+  }, [selectedUser, toast]);
 
   const handleSendMessage = async () => {
     if (!selectedUser || !message.trim()) return;
 
     try {
+      console.log('📤 Sending message:', {
+        to: selectedUser.phone,
+        message: message
+      });
+
       const response = await fetch('https://cc.automate8.com/send-sms', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          to: selectedUser,
+          to: selectedUser.phone,
           message: message.trim()
-        })
+        }),
       });
 
-      const responseData = await response.json();
-      console.log('SMS API Response:', responseData);
-
-      if (!response.ok) {
-        throw new Error(responseData.message || 'Failed to send message');
-      }
-
-      const sentMessage = {
-        from: 'me',
-        to: selectedUser,
-        message: message.trim(),
-        timestamp: new Date().toISOString(),
-        direction: 'outbound'
-      };
-      console.log('Sent message:', sentMessage);
-      setMessages(prev => [...prev, sentMessage]);
+      const data = await response.json();
       
-      setMessage('');
-      toast({
-        title: 'Message Sent',
-        description: 'SMS sent successfully',
-        status: 'success',
-        duration: 3000,
-        isClosable: true,
-      });
+      if (data.success) {
+        // Create outbound message object
+        const outboundMessage = {
+          from: '+13256665486', // Twilio number
+          to: selectedUser.phone,
+          message: message.trim(),
+          timestamp: new Date().toISOString(),
+          direction: 'outbound',
+          messageSid: data.messageSid,
+          status: data.status
+        };
+
+        // Add to messages state
+        setMessages(prev => {
+          const isDuplicate = prev.some(m => 
+            m.messageSid === data.messageSid || 
+            (m.timestamp === outboundMessage.timestamp && m.message === outboundMessage.message)
+          );
+          
+          if (isDuplicate) {
+            console.log('📝 Duplicate message, skipping');
+            return prev;
+          }
+
+          console.log('📝 Adding outbound message to history:', outboundMessage);
+          return [...prev, outboundMessage];
+        });
+
+        // Clear input
+        setMessage('');
+        
+        toast({
+          title: 'Message sent',
+          status: 'success',
+          duration: 3000,
+        });
+      } else {
+        throw new Error(data.error || 'Failed to send message');
+      }
     } catch (error) {
-      console.error('Error sending message:', error);
+      console.error('❌ Send message error:', error);
       toast({
-        title: 'Error',
-        description: error.message || 'Failed to send message',
+        title: 'Error sending message',
+        description: error.message,
         status: 'error',
         duration: 3000,
-        isClosable: true,
       });
     }
   };
@@ -196,17 +209,15 @@ function App() {
     });
   };
 
-  // Filter messages for selected user
-  const filteredMessages = messages.filter(msg => {
-    if (!selectedUser) return false;
-    return msg.from === selectedUser.phone || msg.to === selectedUser.phone;
-  });
+  const filteredMessages = messages.filter(msg => 
+    msg.from === selectedUser || msg.to === selectedUser
+  );
 
   return (
     <ChakraProvider>
       <Box 
         minH="100vh" 
-        bg={isDark ? 'gray.800' : 'gray.50'}
+        position="relative"
         bgImage="url('https://images.unsplash.com/photo-1506744038136-46273834b3fb?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80')"
         bgSize="cover"
         bgPosition="center"
@@ -225,94 +236,103 @@ function App() {
         
         {/* Content */}
         <Box position="relative" zIndex="1">
-          {/* Toggle Test/Main UI */}
-          <Box position="fixed" right="4" top="4">
-            <Button onClick={() => setShowTestChat(!showTestChat)} size="sm" mr={2}>
-              {showTestChat ? 'Show Main UI' : 'Show Test UI'}
-            </Button>
-            <Button onClick={toggleColorMode} size="sm">
-              {isDark ? <Sun size={16} /> : <Moon size={16} />}
-            </Button>
+          {/* Dock */}
+          <Box
+            position="fixed"
+            bottom="20px"
+            left="50%"
+            transform="translateX(-50%)"
+            bg={isDark ? 'gray.700' : 'white'}
+            p={2}
+            borderRadius="full"
+            boxShadow="lg"
+            zIndex={1000}
+          >
+            <HStack spacing={4}>
+              <IconButton
+                icon={<MessageCircle />}
+                colorScheme="blue"
+                variant="ghost"
+                isRound
+                onClick={() => setShowChat(true)}
+              />
+              <IconButton
+                icon={isDark ? <Sun /> : <Moon />}
+                onClick={toggleColorMode}
+                variant="ghost"
+                isRound
+              />
+            </HStack>
           </Box>
 
+          {/* Chat Window */}
+          {showChat && (
+            <DockWindow title="LiveChat" onClose={() => setShowChat(false)}>
+              <Box h="100%" display="flex">
+                {/* Left Panel */}
+                <Box w="300px" borderRight="1px solid" borderColor={isDark ? 'gray.700' : 'gray.200'}>
+                  <VStack h="100%" spacing={0}>
+                    <Box p={4} w="100%">
+                      <IconButton
+                        icon={<Plus />}
+                        onClick={() => setShowAddContact(true)}
+                        size="sm"
+                        colorScheme="blue"
+                        variant="ghost"
+                        isRound
+                      />
+                    </Box>
+                    <UserList
+                      users={users}
+                      selectedUser={selectedUser}
+                      onSelectUser={setSelectedUser}
+                      messages={messages}
+                    />
+                  </VStack>
+                </Box>
+
+                {/* Right Panel */}
+                <Box flex="1" display="flex" flexDirection="column">
+                  <MessageList messages={filteredMessages} />
+                  <MessageInput
+                    message={message}
+                    onChange={setMessage}
+                    onSend={handleSendMessage}
+                  />
+                </Box>
+              </Box>
+            </DockWindow>
+          )}
+
+          {/* Add Contact Modal */}
+          {showAddContact && (
+            <ContactForm
+              isOpen={showAddContact}
+              onClose={() => setShowAddContact(false)}
+              onAddContact={handleAddContact}
+              isDark={isDark}
+            />
+          )}
+        </Box>
+        
+        {/* Test Chat Toggle */}
+        <Box position="fixed" right="4" top="4">
+          <Button onClick={toggleColorMode} size="sm">
+            {isDark ? <Sun size={16} /> : <Moon size={16} />}
+          </Button>
+        </Box>
+        
+        <VStack spacing={4} p={4}>
+          <Button onClick={() => setShowTestChat(!showTestChat)}>
+            {showTestChat ? 'Show Dock UI' : 'Show Test Chat'}
+          </Button>
+          
           {showTestChat ? (
             <TestChat />
           ) : (
-            <>
-              {/* Dock */}
-              <Box
-                position="fixed"
-                bottom="20px"
-                left="50%"
-                transform="translateX(-50%)"
-                bg={isDark ? 'gray.700' : 'white'}
-                p={2}
-                borderRadius="full"
-                boxShadow="lg"
-                zIndex={1000}
-              >
-                <HStack spacing={4}>
-                  <IconButton
-                    icon={<MessageCircle />}
-                    colorScheme="blue"
-                    variant="ghost"
-                    isRound
-                    onClick={() => setShowChat(true)}
-                  />
-                </HStack>
-              </Box>
-
-              {/* Chat Window */}
-              {showChat && (
-                <DockWindow title="LiveChat" onClose={() => setShowChat(false)}>
-                  <Box h="100%" display="flex">
-                    {/* Left Panel */}
-                    <Box w="300px" borderRight="1px solid" borderColor={isDark ? 'gray.700' : 'gray.200'}>
-                      <VStack h="100%" spacing={0}>
-                        <Box p={4} w="100%">
-                          <IconButton
-                            icon={<Plus />}
-                            onClick={() => setShowAddContact(true)}
-                            size="sm"
-                            colorScheme="blue"
-                            variant="ghost"
-                            isRound
-                          />
-                        </Box>
-                        <UserList
-                          users={users}
-                          selectedUser={selectedUser}
-                          onSelectUser={setSelectedUser}
-                          messages={messages}
-                        />
-                      </VStack>
-                    </Box>
-
-                    {/* Right Panel */}
-                    <Box flex="1" display="flex" flexDirection="column">
-                      <MessageList messages={filteredMessages} />
-                      <MessageInput
-                        message={message}
-                        onChange={setMessage}
-                        onSend={handleSendMessage}
-                      />
-                    </Box>
-                  </Box>
-                </DockWindow>
-              )}
-
-              {/* Add Contact Modal */}
-              {showAddContact && (
-                <ContactForm
-                  isOpen={showAddContact}
-                  onClose={() => setShowAddContact(false)}
-                  onAddContact={handleAddContact}
-                  isDark={isDark}
-                />
-              )}
-            </>
+            <DockWindow />
           )}
-        </Box>
+        </VStack>
       </Box>
     </ChakraProvider>
   );
