@@ -34,8 +34,8 @@ function App() {
       setConnected(false);
     });
 
-    // Listen for SMS received events
-    socket.on('message', (message) => {
+    // Listen for SMS events
+    socket.on('sms', (message) => {
       console.log('New SMS received:', message);
       const formattedMessage = {
         from: message.from || message.sender,
@@ -60,7 +60,7 @@ function App() {
     return () => {
       socket.off('connect');
       socket.off('disconnect');
-      socket.off('message');
+      socket.off('sms');
     };
   }, [toast]);
 
@@ -82,6 +82,9 @@ function App() {
       if (!response.ok) {
         throw new Error('Failed to send message');
       }
+
+      const responseData = await response.json();
+      console.log('SMS API Response:', responseData);
 
       // Add sent message to messages state
       const sentMessage = {
