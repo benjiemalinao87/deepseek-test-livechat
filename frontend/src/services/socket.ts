@@ -3,6 +3,7 @@ import { Message } from '../types';
 
 // Use the backend domain for socket connection
 const SOCKET_URL = 'https://cc.automate8.com';
+console.log('🌐 Backend URL:', SOCKET_URL);
 
 class SocketService {
   private socket: Socket | null = null;

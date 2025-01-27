@@ -24,6 +24,11 @@ function App() {
   const isDark = colorMode === 'dark';
 
   useEffect(() => {
+    console.log('🔧 Environment:', {
+      apiUrl: process.env.REACT_APP_API_URL || 'https://cc.automate8.com',
+      nodeEnv: process.env.NODE_ENV
+    });
+
     const inboundEvents = ['new_message'];
     console.log('🎧 Setting up listeners for events:', inboundEvents);
 
