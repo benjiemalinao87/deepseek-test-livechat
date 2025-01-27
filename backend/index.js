@@ -10,7 +10,12 @@ const server = http.createServer(app);
 
 // Configure CORS for both Express and Socket.IO
 const corsOptions = {
-  origin: ["https://cc1.automate8.com", "http://localhost:3000"],
+  origin: [
+    "https://cc1.automate8.com",
+    "https://cc.automate8.com",
+    "http://localhost:3000",
+    "https://deepseek-test-livechat-production.up.railway.app"
+  ],
   methods: ['GET', 'POST', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
@@ -26,7 +31,12 @@ app.use(express.urlencoded({ extended: true }));
 const io = new Server(server, {
   path: '/socket.io',
   cors: {
-    origin: ["https://cc1.automate8.com", "http://localhost:3000"],
+    origin: [
+      "https://cc1.automate8.com",
+      "https://cc.automate8.com",
+      "http://localhost:3000",
+      "https://deepseek-test-livechat-production.up.railway.app"
+    ],
     methods: ["GET", "POST"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true
@@ -123,31 +133,53 @@ app.post('/message-status', (req, res) => {
 // Twilio webhook for incoming messages
 app.post('/twilio', (req, res) => {
   try {
-    console.log('Received webhook from Twilio:', {
+    console.log('🔔 Received webhook from Twilio:', {
       from: req.body.From,
       to: req.body.To,
       body: req.body.Body,
-      messageSid: req.body.MessageSid
+      messageSid: req.body.MessageSid,
+      rawBody: req.body // Log full request body for debugging
     });
     
     const { From: from, To: to, Body: message, MessageSid: messageSid } = req.body;
     
-    // Broadcast to all connected clients
-    io.emit('new_message', {
+    // Validate required fields
+    if (!from || !message) {
+      console.error('❌ Missing required fields:', { from, message });
+      res.status(400).send('<Response></Response>');
+      return;
+    }
+    
+    const messageData = {
       from,
       to,
       message,
       timestamp: new Date(),
       direction: 'inbound',
       messageSid
+    };
+    
+    // Broadcast to all connected clients
+    console.log('📡 Broadcasting message to clients:', messageData);
+    io.emit('new_message', messageData);
+    
+    // Log connected clients for debugging
+    const connectedSockets = Array.from(io.sockets.sockets.keys());
+    console.log('🔌 Connected clients:', {
+      count: connectedSockets.length,
+      socketIds: connectedSockets
     });
-    console.log('Broadcasted message to all clients');
 
     // Send TwiML response
     res.type('text/xml');
     res.send('<Response></Response>');
+    
+    console.log('✅ Successfully processed webhook');
   } catch (error) {
-    console.error('Error handling webhook:', error);
+    console.error('❌ Error handling webhook:', {
+      error: error.message,
+      stack: error.stack
+    });
     res.status(500).send('<Response></Response>');
   }
 });
