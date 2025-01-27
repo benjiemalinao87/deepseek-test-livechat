@@ -35,34 +35,58 @@ function App() {
     });
 
     // Listen for all possible inbound SMS events
-    const inboundEvents = ['inbound_sms', 'sms_received', 'message', 'inbound_message'];
+    const inboundEvents = ['inbound_sms', 'sms_received', 'message', 'inbound_message', 'twilio_webhook', 'sms'];
+    
+    // Debug: Log which events we're listening to
+    console.log('🎧 Setting up listeners for events:', inboundEvents);
+
     inboundEvents.forEach(event => {
       socket.on(event, (message) => {
-        console.log(`New message received on ${event}:`, message);
-        const formattedMessage = {
-          from: message.From || message.from || message.sender,
-          to: message.To || message.to || message.recipient || 'me',
-          message: message.Body || message.body || message.text || message.message || '',
-          timestamp: message.timestamp || new Date().toISOString(),
-          direction: 'inbound'
-        };
-        console.log('Formatted inbound message:', formattedMessage);
-        setMessages(prev => [...prev, formattedMessage]);
-        
-        // Show notification for new message
-        toast({
-          title: 'New Message',
-          description: `From: ${formattedMessage.from}`,
-          status: 'info',
-          duration: 5000,
-          isClosable: true,
-        });
+        console.log(`📥 New message on ${event}:`, message);
+        try {
+          // Try to parse if message is a string
+          const messageData = typeof message === 'string' ? JSON.parse(message) : message;
+          console.log('📦 Parsed message data:', messageData);
+          
+          const formattedMessage = {
+            from: messageData.From || messageData.from || messageData.sender,
+            to: messageData.To || messageData.to || messageData.recipient || 'me',
+            message: messageData.Body || messageData.body || messageData.text || messageData.message || '',
+            timestamp: messageData.timestamp || new Date().toISOString(),
+            direction: 'inbound'
+          };
+          
+          // Validate message
+          if (!formattedMessage.from || !formattedMessage.message) {
+            console.warn('⚠️ Invalid message format:', messageData);
+            return;
+          }
+          
+          console.log('✨ Adding formatted message:', formattedMessage);
+          setMessages(prev => {
+            const newMessages = [...prev, formattedMessage];
+            console.log('📚 Updated messages:', newMessages);
+            return newMessages;
+          });
+          
+          toast({
+            title: 'New Message',
+            description: `From: ${formattedMessage.from}`,
+            status: 'info',
+            duration: 5000,
+            isClosable: true,
+          });
+        } catch (error) {
+          console.error('❌ Error processing message:', {
+            error: error.message,
+            originalMessage: message
+          });
+        }
       });
     });
 
     return () => {
-      socket.off('connect');
-      socket.off('disconnect');
+      console.log('🧹 Cleaning up socket listeners');
       inboundEvents.forEach(event => socket.off(event));
     };
   }, [toast]);
