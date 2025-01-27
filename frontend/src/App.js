@@ -25,97 +25,73 @@ function App() {
 
   const isDark = colorMode === 'dark';
 
+  // Socket event handlers
   useEffect(() => {
-    const inboundEvents = ['new_message'];
-    console.log('🎧 Setting up listeners for events:', inboundEvents);
-
-    inboundEvents.forEach(event => {
-      socket.on(event, (rawData) => {
-        console.log(`📥 Raw socket event:`, rawData);
-        try {
-          // Extract message data
-          let messageData;
-          
-          // Handle different message formats
-          if (rawData && typeof rawData === 'object') {
-            console.log('📦 Processing message object:', rawData);
-            
-            // Use the message data directly as it's already formatted by the backend
-            messageData = {
-              from: rawData.from,
-              to: rawData.to,
-              message: rawData.message,
-              timestamp: rawData.timestamp || new Date().toISOString(),
-              direction: rawData.direction || 'inbound',
-              messageSid: rawData.messageSid,
-              status: rawData.status
-            };
-            
-            console.log('✨ Formatted message:', messageData);
-          } else {
-            console.warn('⚠️ Unexpected message format:', rawData);
-            return;
-          }
-          
-          // Validate message
-          if (!messageData.from || !messageData.message) {
-            console.warn('⚠️ Invalid message:', messageData);
-            return;
-          }
-
-          console.log('✨ Adding message to UI:', messageData);
-          
-          // Update messages state with the new message
-          setMessages(prev => {
-            // Check if message already exists to prevent duplicates
-            const exists = prev.some(m => m.messageSid === messageData.messageSid);
-            if (exists) {
-              console.log('📝 Message already exists, skipping:', messageData.messageSid);
-              return prev;
-            }
-            return [...prev, messageData];
-          });
-          
-          // Show notification for inbound messages
-          toast({
-            title: 'New Message',
-            description: `From: ${messageData.from}\n${messageData.message}`,
-            status: 'info',
-            duration: 3000,
-            isClosable: true,
-          });
-        } catch (error) {
-          console.error('❌ Error handling message:', {
-            error: error.message,
-            rawData
-          });
-        }
+    socket.on('connect', () => {
+      console.log('✅ Connected to socket');
+      setConnected(true);
+      toast({
+        title: 'Connected',
+        description: `Socket ID: ${socket.id}`,
+        status: 'success',
+        duration: 3000,
       });
     });
 
-    return () => {
-      console.log('🧹 Cleaning up socket listeners');
-      inboundEvents.forEach(event => socket.off(event));
-    };
-  }, [toast, setMessages]);
-
-  useEffect(() => {
-    socket.on('connect', () => {
-      console.log('Connected to server');
-      setConnected(true);
-    });
-
     socket.on('disconnect', () => {
-      console.log('Disconnected from server');
+      console.log('❌ Disconnected from socket');
       setConnected(false);
+      toast({
+        title: 'Disconnected',
+        status: 'warning',
+        duration: 3000,
+      });
+    });
+
+    socket.on('new_message', (data) => {
+      console.log('📥 Received message:', data);
+      
+      // Validate message data
+      if (!data || !data.message) {
+        console.warn('⚠️ Invalid message data:', data);
+        return;
+      }
+
+      // Add message to state
+      setMessages(prev => {
+        // Check for duplicates
+        const isDuplicate = prev.some(m => 
+          m.messageSid === data.messageSid || 
+          (m.timestamp === data.timestamp && m.message === data.message)
+        );
+        
+        if (isDuplicate) {
+          console.log('📝 Duplicate message, skipping');
+          return prev;
+        }
+
+        const newMessages = [...prev, data];
+        console.log('📝 Updated messages:', newMessages);
+        return newMessages;
+      });
+
+      // Show notification for inbound messages
+      if (data.direction === 'inbound') {
+        toast({
+          title: 'New Message',
+          description: `From: ${data.from}\n${data.message}`,
+          status: 'info',
+          duration: 3000,
+        });
+      }
     });
 
     return () => {
-      console.log('🧹 Cleaning up socket listeners');
       socket.off('connect');
       socket.off('disconnect');
+      socket.off('new_message');
     };
-  }, []);
+  }, [toast]);
 
   const handleSendMessage = async () => {
     if (!selectedUser || !message.trim()) return;
