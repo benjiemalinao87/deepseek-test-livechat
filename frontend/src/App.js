@@ -96,6 +96,89 @@ function App() {
     };
   }, [toast]);
 
+  useEffect(() => {
+    // Listen for all possible inbound SMS events
+    const inboundEvents = ['new_message'];
+    
+    console.log('🎧 Setting up listeners for events:', inboundEvents);
+
+    // Keep track of recently added messages to prevent duplicates
+    const recentMessageIds = new Set();
+
+    inboundEvents.forEach(event => {
+      socket.on(event, (data) => {
+        console.log(`📥 New message on ${event}:`, data);
+        try {
+          // Handle array of messages
+          const messages = Array.isArray(data) ? data : [data];
+          
+          messages.forEach(messageData => {
+            console.log('📦 Processing message:', messageData);
+            
+            // Try to parse if message is a string
+            const parsedData = typeof messageData === 'string' ? JSON.parse(messageData) : messageData;
+            
+            const formattedMessage = {
+              from: parsedData.From || parsedData.from || parsedData.sender || parsedData.phoneNumber,
+              to: parsedData.To || parsedData.to || parsedData.recipient || 'me',
+              message: parsedData.Body || parsedData.body || parsedData.text || parsedData.message || parsedData.content,
+              timestamp: parsedData.timestamp || parsedData.time || new Date().toISOString(),
+              direction: parsedData.direction || 'inbound'
+            };
+            
+            // Create a unique ID for the message
+            const messageId = `${formattedMessage.from}-${formattedMessage.message}-${formattedMessage.timestamp}`;
+            
+            // Skip if we've recently added this message
+            if (recentMessageIds.has(messageId)) {
+              console.log('⏭️ Skipping duplicate message:', messageId);
+              return;
+            }
+            
+            // Validate message
+            if (!formattedMessage.from || !formattedMessage.message) {
+              console.warn('⚠️ Invalid message format:', parsedData);
+              return;
+            }
+            
+            // Add to recent messages
+            recentMessageIds.add(messageId);
+            // Clean up old messages after 5 seconds
+            setTimeout(() => recentMessageIds.delete(messageId), 5000);
+            
+            console.log('✨ Adding formatted message:', formattedMessage);
+            setMessages(prev => {
+              const newMessages = [...prev, formattedMessage];
+              console.log('📚 Updated messages:', newMessages);
+              return newMessages;
+            });
+            
+            // Only show toast for inbound messages
+            if (formattedMessage.direction === 'inbound') {
+              toast({
+                title: 'New Message',
+                description: `From: ${formattedMessage.from}`,
+                status: 'info',
+                duration: 5000,
+                isClosable: true,
+              });
+            }
+          });
+        } catch (error) {
+          console.error('❌ Error processing message:', {
+            error: error.message,
+            originalData: data
+          });
+        }
+      });
+    });
+
+    return () => {
+      console.log('🧹 Cleaning up socket listeners');
+      inboundEvents.forEach(event => socket.off(event));
+    };
+  }, [toast]);
+
   const handleSendMessage = async () => {
     if (!selectedUser || !message.trim()) return;
 
