@@ -60,16 +60,13 @@ export function ContactWindow() {
     <DockWindow title="Contacts">
       <VStack spacing={4} align="stretch" p={4}>
         <Button colorScheme="blue" onClick={onOpen}>
-          Add New Contact
+          Add Contact
         </Button>
-
-        {isOpen && (
-          <ContactForm
-            isOpen={isOpen}
-            onClose={onClose}
-            onAddContact={handleAddContact}
-          />
-        )}
+        <ContactForm
+          isOpen={isOpen}
+          onClose={onClose}
+          onAddContact={handleAddContact}
+        />
       </VStack>
     </DockWindow>
   );
