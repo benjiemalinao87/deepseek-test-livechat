@@ -29,70 +29,59 @@ function App() {
       nodeEnv: process.env.NODE_ENV
     });
 
-    const inboundEvents = ['new_message'];
-    console.log('🎧 Setting up listeners for events:', inboundEvents);
+    const socket = socket;
+    console.log('🔌 Socket connection initialized');
 
-    inboundEvents.forEach(event => {
-      socket.on(event, (rawData) => {
-        console.log(`📥 Raw socket event:`, rawData);
-        try {
-          // Extract message data
-          let messageData;
-          
-          // Handle different message formats
-          if (rawData && typeof rawData === 'object') {
-            console.log('📦 Processing message object:', rawData);
-            
-            // Extract the message content
-            const messageContent = rawData.Body || rawData.message || rawData.text || '';
-            const fromNumber = rawData.From || rawData.from || '';
-            const toNumber = rawData.To || rawData.to || '';
-            
-            messageData = {
-              from: fromNumber,
-              to: toNumber,
-              message: messageContent,
-              timestamp: new Date().toISOString(),
-              direction: 'inbound'
-            };
-            
-            console.log('✨ Formatted message:', messageData);
-          } else {
-            console.warn('⚠️ Unexpected message format:', rawData);
-            return;
-          }
-          
-          // Validate message
-          if (!messageData.from || !messageData.message) {
-            console.warn('⚠️ Invalid message:', messageData);
-            return;
-          }
+    // Debug socket connection
+    socket.on('connect', () => {
+      console.log('✅ Socket connected with ID:', socket.id);
+      setConnected(true);
+    });
 
-          console.log('✨ Adding message to UI:', messageData);
-          setMessages(prev => [...prev, messageData]);
-          
-          // Show notification for inbound messages
-          toast({
-            title: 'New Message',
-            description: `From: ${messageData.from}\n${messageData.message}`,
-            status: 'info',
-            duration: 3000,
-            isClosable: true,
-          });
-        } catch (error) {
-          console.error('❌ Error handling message:', {
-            error: error.message,
-            rawData
-          });
-        }
+    socket.on('disconnect', (reason) => {
+      console.log('❌ Socket disconnected:', reason);
+      setConnected(false);
+    });
+
+    socket.on('connect_error', (error) => {
+      console.error('🚨 Socket connection error:', {
+        message: error.message,
+        type: error.type,
+        description: error.description
+      });
+      setConnected(false);
+    });
+
+    // Handle inbound messages
+    socket.on('new_message', (data) => {
+      console.log('📥 Received inbound message:', data);
+      const newMessage = {
+        id: data.messageSid || Date.now(),
+        from: data.from,
+        message: data.message || data.Body,
+        timestamp: new Date(),
+        direction: data.direction || 'inbound'
+      };
+      console.log('💬 Processed message:', newMessage);
+      setMessages(prev => [...prev, newMessage]);
+    });
+
+    // Debug all socket events
+    socket.onAny((eventName, ...args) => {
+      console.log('🎯 Socket Event:', {
+        event: eventName,
+        args: args
       });
     });
 
     return () => {
-      console.log('🧹 Cleaning up socket listeners');
-      inboundEvents.forEach(event => socket.off(event));
+      console.log('🔌 Cleaning up socket connection');
+      socket.off('new_message');
+      socket.off('connect');
+      socket.off('disconnect');
+      socket.off('connect_error');
     };
-  }, [toast, setMessages]);
+  }, []);
 
   useEffect(() => {
     socket.on('connect', () => {
@@ -113,13 +102,12 @@ function App() {
   }, []);
 
   const handleSendMessage = async () => {
-    if (!selectedUser || !message.trim()) return;
-
     try {
+      console.log('📤 Sending message:', message);
       const response = await fetch('https://cc.automate8.com/send-sms', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           to: selectedUser,
@@ -127,40 +115,26 @@ function App() {
         })
       });
 
-      const responseData = await response.json();
-      console.log('SMS API Response:', responseData);
+      const result = await response.json();
+      console.log('📨 Send message response:', result);
 
-      if (!response.ok) {
-        throw new Error(responseData.message || 'Failed to send message');
+      if (result.success) {
+        const newMessage = {
+          id: result.messageSid || Date.now(),
+          from: 'You',
+          message: message.trim(),
+          timestamp: new Date(),
+          direction: 'outbound'
+        };
+        console.log('💬 Adding outbound message:', newMessage);
+        setMessages(prev => [...prev, newMessage]);
+      } else {
+        console.error('❌ Failed to send message:', result.error);
+        throw new Error(result.error);
       }
-
-      const sentMessage = {
-        from: 'me',
-        to: selectedUser,
-        message: message.trim(),
-        timestamp: new Date().toISOString(),
-        direction: 'outbound'
-      };
-      console.log('Sent message:', sentMessage);
-      setMessages(prev => [...prev, sentMessage]);
-      
-      setMessage('');
-      toast({
-        title: 'Message Sent',
-        description: 'SMS sent successfully',
-        status: 'success',
-        duration: 3000,
-        isClosable: true,
-      });
     } catch (error) {
-      console.error('Error sending message:', error);
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to send message',
-        status: 'error',
-        duration: 3000,
-        isClosable: true,
-      });
+      console.error('🚨 Error sending message:', error);
+      throw error;
     }
   };
 
