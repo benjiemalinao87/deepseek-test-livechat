@@ -32,13 +32,6 @@ function App() {
     socket.on('disconnect', () => {
       console.log('Disconnected from server');
       setConnected(false);
-      toast({
-        title: 'Disconnected',
-        description: 'Lost connection to the server',
-        status: 'error',
-        duration: null,
-        isClosable: true,
-      });
     });
 
     socket.on('inbound_message', (message) => {
