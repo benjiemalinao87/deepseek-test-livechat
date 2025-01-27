@@ -22,10 +22,13 @@ import {
   MenuButton,
   MenuList,
   MenuItem,
+  useColorMode,
+  useColorModeValue,
 } from '@chakra-ui/react';
 import { socket } from '../../socket';
 import { SearchIcon, ChevronDownIcon, CloseIcon } from '@chakra-ui/icons';
 import { BsEmojiSmile, BsPaperclip, BsMic, BsCalendarEvent } from 'react-icons/bs';
+import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 
 export const TestChat = () => {
   const [phone, setPhone] = useState('');
@@ -33,6 +36,17 @@ export const TestChat = () => {
   const [messages, setMessages] = useState([]);
   const [isConnected, setIsConnected] = useState(false);
   const toast = useToast();
+  const { colorMode } = useColorMode();
+  const isDark = colorMode === 'dark';
+
+  // Color mode values
+  const bg = useColorModeValue('white', 'gray.800');
+  const borderColor = useColorModeValue('gray.200', 'gray.700');
+  const inputBg = useColorModeValue('gray.100', 'gray.700');
+  const textColor = useColorModeValue('gray.800', 'white');
+  const mutedTextColor = useColorModeValue('gray.600', 'gray.400');
+  const messageBg = useColorModeValue('gray.100', 'gray.700');
+  const outboundMessageBg = useColorModeValue('blue.500', 'blue.400');
 
   useEffect(() => {
     socket.on('connect', () => {
@@ -58,14 +72,8 @@ export const TestChat = () => {
           (m.timestamp === data.timestamp && m.message === data.message)
         );
         
-        if (isDuplicate) {
-          console.log('📝 Duplicate message, skipping');
-          return prev;
-        }
-
-        const newMessages = [...prev, data];
-        console.log('📝 Updated messages:', newMessages);
-        return newMessages;
+        if (isDuplicate) return prev;
+        return [...prev, data];
       });
 
       if (data.direction === 'inbound') {
@@ -133,7 +141,6 @@ export const TestChat = () => {
           );
           
           if (isDuplicate) return prev;
-
           return [...prev, outboundMessage];
         });
 
@@ -157,30 +164,40 @@ export const TestChat = () => {
     }
   };
 
+  const ResizeHandle = () => (
+    <PanelResizeHandle className="ResizeHandleOuter">
+      <Box 
+        w="4px" 
+        bg={borderColor} 
+        h="100%" 
+        cursor="col-resize"
+        _hover={{ bg: 'blue.500' }}
+        transition="background 0.2s"
+      />
+    </PanelResizeHandle>
+  );
+
   return (
-    <Box h="100vh" bg="gray.50">
-      <Grid
-        templateColumns="300px 1fr 300px"
-        h="100%"
-        gap={0}
-        bg="white"
-        shadow="lg"
-        rounded="lg"
-        overflow="hidden"
-      >
+    <Box 
+      h="100vh" 
+      bg={bg}
+      position="relative"
+    >
+      <PanelGroup direction="horizontal">
         {/* Left Panel - User List */}
-        <GridItem borderRight="1px" borderColor="gray.200" bg="white">
-          <VStack h="100%" spacing={0}>
-            <Box p={4} w="100%" borderBottom="1px" borderColor="gray.200">
+        <Panel defaultSize={20} minSize={15}>
+          <VStack h="100%" spacing={0} borderRight="1px" borderColor={borderColor}>
+            <Box p={4} w="100%" borderBottom="1px" borderColor={borderColor}>
               <InputGroup>
                 <InputLeftElement pointerEvents="none">
-                  <SearchIcon color="gray.400" />
+                  <SearchIcon color={mutedTextColor} />
                 </InputLeftElement>
                 <Input
                   placeholder="Search conversations"
                   variant="filled"
-                  bg="gray.100"
-                  _focus={{ bg: 'white' }}
+                  bg={inputBg}
+                  _focus={{ bg: isDark ? 'gray.600' : 'white' }}
+                  color={textColor}
                 />
               </InputGroup>
             </Box>
@@ -193,10 +210,11 @@ export const TestChat = () => {
                     rightIcon={<ChevronDownIcon />}
                     size="sm"
                     variant="ghost"
+                    color={textColor}
                   >
                     All
                   </MenuButton>
-                  <MenuList>
+                  <MenuList bg={bg} borderColor={borderColor}>
                     <MenuItem>All Messages</MenuItem>
                     <MenuItem>Unread</MenuItem>
                     <MenuItem>Archived</MenuItem>
@@ -209,19 +227,19 @@ export const TestChat = () => {
               {/* Contact Item */}
               <Box 
                 p={3} 
-                _hover={{ bg: 'gray.50' }} 
+                _hover={{ bg: isDark ? 'gray.700' : 'gray.50' }} 
                 cursor="pointer"
-                bg={phone ? 'blue.50' : 'transparent'}
+                bg={phone ? (isDark ? 'gray.700' : 'blue.50') : 'transparent'}
                 onClick={() => setPhone('+16267888830')}
               >
                 <HStack spacing={3}>
                   <Avatar size="sm" name="Test User" />
                   <Box flex={1}>
                     <HStack justify="space-between">
-                      <Text fontWeight="medium">Test User</Text>
-                      <Text fontSize="xs" color="gray.500">2m ago</Text>
+                      <Text fontWeight="medium" color={textColor}>Test User</Text>
+                      <Text fontSize="xs" color={mutedTextColor}>2m ago</Text>
                     </HStack>
-                    <Text fontSize="sm" color="gray.500" noOfLines={1}>
+                    <Text fontSize="sm" color={mutedTextColor} noOfLines={1}>
                       {messages[messages.length - 1]?.message || 'No messages yet'}
                     </Text>
                   </Box>
@@ -229,19 +247,21 @@ export const TestChat = () => {
               </Box>
             </VStack>
           </VStack>
-        </GridItem>
+        </Panel>
+
+        <ResizeHandle />
 
         {/* Middle Panel - Chat Area */}
-        <GridItem>
+        <Panel defaultSize={55} minSize={30}>
           <VStack h="100%" spacing={0}>
             {/* Chat Header */}
-            <Box p={4} w="100%" borderBottom="1px" borderColor="gray.200">
+            <Box p={4} w="100%" borderBottom="1px" borderColor={borderColor}>
               <HStack justify="space-between">
                 <HStack>
                   <Avatar size="sm" name="Test User" />
                   <Box>
-                    <Text fontWeight="medium">Test User</Text>
-                    <HStack justify="center" mt={2} spacing={2}>
+                    <Text fontWeight="medium" color={textColor}>Test User</Text>
+                    <HStack spacing={2}>
                       <Badge colorScheme="green">CUSTOMER</Badge>
                       <Badge colorScheme="blue">OPEN</Badge>
                     </HStack>
@@ -252,6 +272,7 @@ export const TestChat = () => {
                   variant="ghost"
                   size="sm"
                   aria-label="Close chat"
+                  color={textColor}
                 />
               </HStack>
             </Box>
@@ -262,7 +283,7 @@ export const TestChat = () => {
               w="100%" 
               overflowY="auto" 
               p={4}
-              bg="gray.50"
+              bg={isDark ? 'gray.900' : 'gray.50'}
             >
               <VStack spacing={4} align="stretch">
                 {messages.map((msg, index) => {
@@ -274,8 +295,8 @@ export const TestChat = () => {
                     >
                       <Box
                         maxW="70%"
-                        bg={isOutbound ? 'blue.500' : 'white'}
-                        color={isOutbound ? 'white' : 'black'}
+                        bg={isOutbound ? outboundMessageBg : bg}
+                        color={isOutbound ? 'white' : textColor}
                         p={3}
                         rounded="lg"
                         shadow="sm"
@@ -283,7 +304,7 @@ export const TestChat = () => {
                         <Text>{msg.message}</Text>
                         <Text 
                           fontSize="xs" 
-                          color={isOutbound ? 'blue.100' : 'gray.500'}
+                          color={isOutbound ? 'whiteAlpha.800' : mutedTextColor}
                           textAlign="right"
                           mt={1}
                         >
@@ -297,17 +318,19 @@ export const TestChat = () => {
             </Box>
 
             {/* Message Input */}
-            <Box p={4} w="100%" borderTop="1px" borderColor="gray.200">
+            <Box p={4} w="100%" borderTop="1px" borderColor={borderColor}>
               <HStack spacing={2}>
                 <IconButton
                   icon={<BsEmojiSmile />}
                   variant="ghost"
                   aria-label="Add emoji"
+                  color={textColor}
                 />
                 <IconButton
                   icon={<BsPaperclip />}
                   variant="ghost"
                   aria-label="Attach file"
+                  color={textColor}
                 />
                 <Input
                   placeholder="Type your message here"
@@ -318,11 +341,14 @@ export const TestChat = () => {
                       handleSendMessage();
                     }
                   }}
+                  bg={inputBg}
+                  color={textColor}
                 />
                 <IconButton
                   icon={<BsMic />}
                   variant="ghost"
                   aria-label="Voice message"
+                  color={textColor}
                 />
                 <Button
                   colorScheme="blue"
@@ -334,15 +360,17 @@ export const TestChat = () => {
               </HStack>
             </Box>
           </VStack>
-        </GridItem>
+        </Panel>
+
+        <ResizeHandle />
 
         {/* Right Panel - User Details */}
-        <GridItem borderLeft="1px" borderColor="gray.200" bg="white">
-          <VStack h="100%" p={6} spacing={6} align="stretch">
+        <Panel defaultSize={25} minSize={15}>
+          <VStack h="100%" p={6} spacing={6} align="stretch" borderLeft="1px" borderColor={borderColor}>
             <VStack spacing={4} align="center">
               <Avatar size="xl" name="Test User" />
               <Box textAlign="center">
-                <Text fontSize="xl" fontWeight="medium">Test User</Text>
+                <Text fontSize="xl" fontWeight="medium" color={textColor}>Test User</Text>
                 <HStack justify="center" mt={2} spacing={2}>
                   <Badge colorScheme="green">CUSTOMER</Badge>
                   <Badge colorScheme="blue">OPEN</Badge>
@@ -353,15 +381,15 @@ export const TestChat = () => {
             <Divider />
 
             <VStack spacing={4} align="stretch">
-              <Heading size="sm">Contact Information</Heading>
+              <Heading size="sm" color={textColor}>Contact Information</Heading>
               <VStack spacing={3} align="stretch">
                 <HStack>
-                  <Text color="gray.500">Phone:</Text>
-                  <Text>{phone || 'Not set'}</Text>
+                  <Text color={mutedTextColor}>Phone:</Text>
+                  <Text color={textColor}>{phone || 'Not set'}</Text>
                 </HStack>
                 <HStack>
-                  <Text color="gray.500">Location:</Text>
-                  <Text>San Francisco, CA</Text>
+                  <Text color={mutedTextColor}>Location:</Text>
+                  <Text color={textColor}>San Francisco, CA</Text>
                 </HStack>
               </VStack>
             </VStack>
@@ -375,8 +403,8 @@ export const TestChat = () => {
               Schedule Meeting
             </Button>
           </VStack>
-        </GridItem>
-      </Grid>
+        </Panel>
+      </PanelGroup>
     </Box>
   );
 };
