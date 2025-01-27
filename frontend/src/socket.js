@@ -1,10 +1,10 @@
 import { io } from 'socket.io-client';
 
-const SOCKET_URL = window.REACT_APP_API_URL || process.env.REACT_APP_API_URL || 'http://localhost:3001';
+const SOCKET_URL = 'https://cc1.automate8.com';
 
 export const socket = io(SOCKET_URL, {
   autoConnect: true,
-  transports: ['polling', 'websocket'],
+  transports: ['websocket', 'polling'],
   withCredentials: true,
   path: '/socket.io'
 });
@@ -20,7 +20,12 @@ socket.on('connect_error', (error) => {
 });
 
 socket.on('connect', () => {
-  console.log('Socket connected successfully');
+  console.log('Socket connected successfully to:', SOCKET_URL);
+});
+
+// Listen for incoming messages
+socket.on('inbound_message', (message) => {
+  console.log('Received inbound message:', message);
 });
 
 export default socket;

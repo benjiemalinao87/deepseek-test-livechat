@@ -48,15 +48,29 @@ function App() {
       });
     });
 
-    socket.on('new_message', (newMsg) => {
-      console.log('New message received:', newMsg);
-      setMessages(prev => [...prev, newMsg]);
+    socket.on('inbound_message', (message) => {
+      console.log('New inbound message received:', message);
+      setMessages(prev => [...prev, {
+        from: message.from,
+        to: message.to,
+        message: message.message,
+        timestamp: message.timestamp || new Date().toISOString()
+      }]);
+      
+      // Show notification for new message
+      toast({
+        title: 'New Message',
+        description: `From: ${message.from}`,
+        status: 'info',
+        duration: 5000,
+        isClosable: true,
+      });
     });
 
     return () => {
       socket.off('connect');
       socket.off('disconnect');
-      socket.off('new_message');
+      socket.off('inbound_message');
     };
   }, [toast]);
 
