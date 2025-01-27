@@ -27,13 +27,6 @@ function App() {
     socket.on('connect', () => {
       console.log('Connected to server');
       setConnected(true);
-      toast({
-        title: 'Connected',
-        description: 'Successfully connected to the server',
-        status: 'success',
-        duration: 3000,
-        isClosable: true,
-      });
     });
 
     socket.on('disconnect', () => {
