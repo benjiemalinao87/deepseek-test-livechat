@@ -103,6 +103,11 @@ export const TestChat = () => {
     }
 
     try {
+      console.log('📤 Sending message:', {
+        to: phone,
+        message: message
+      });
+
       const response = await fetch('https://cc.automate8.com/send-sms', {
         method: 'POST',
         headers: {
@@ -110,14 +115,43 @@ export const TestChat = () => {
         },
         body: JSON.stringify({
           to: phone,
-          message: message,
+          message: message.trim()
         }),
       });
 
       const data = await response.json();
       
       if (data.success) {
+        // Create outbound message object
+        const outboundMessage = {
+          from: '+13256665486', // Twilio number
+          to: phone,
+          message: message.trim(),
+          timestamp: new Date().toISOString(),
+          direction: 'outbound',
+          messageSid: data.messageSid,
+          status: data.status
+        };
+
+        // Add to messages state
+        setMessages(prev => {
+          const isDuplicate = prev.some(m => 
+            m.messageSid === data.messageSid || 
+            (m.timestamp === outboundMessage.timestamp && m.message === outboundMessage.message)
+          );
+          
+          if (isDuplicate) {
+            console.log('📝 Duplicate message, skipping');
+            return prev;
+          }
+
+          console.log('📝 Adding outbound message to history:', outboundMessage);
+          return [...prev, outboundMessage];
+        });
+
+        // Clear input
         setMessage('');
+        
         toast({
           title: 'Message sent',
           status: 'success',
@@ -127,8 +161,9 @@ export const TestChat = () => {
         throw new Error(data.error || 'Failed to send message');
       }
     } catch (error) {
+      console.error('❌ Send message error:', error);
       toast({
-        title: 'Error',
+        title: 'Error sending message',
         description: error.message,
         status: 'error',
         duration: 3000,
