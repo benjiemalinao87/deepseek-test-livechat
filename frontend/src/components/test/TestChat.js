@@ -7,18 +7,11 @@ import {
   HStack,
   Text,
   useToast,
-  Select,
-  Modal,
-  ModalOverlay,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
-  ModalCloseButton,
-  FormControl,
-  FormLabel,
   useDisclosure,
 } from '@chakra-ui/react';
 import { socket } from '../../socket';
+import { ContactSelect } from './ContactSelect';
+import { AddContactModal } from './AddContactModal';
 
 export const TestChat = () => {
   const [message, setMessage] = useState('');
@@ -27,7 +20,6 @@ export const TestChat = () => {
     { name: 'Benjie', phone: '+16267888830' }
   ]);
   const [selectedContact, setSelectedContact] = useState(null);
-  const [newContact, setNewContact] = useState({ name: '', phone: '' });
   const { isOpen, onOpen, onClose } = useDisclosure();
   const toast = useToast();
 
@@ -96,50 +88,26 @@ export const TestChat = () => {
     }
   };
 
-  const addContact = () => {
-    if (!newContact.name || !newContact.phone) {
-      toast({
-        title: 'Error',
-        description: 'Please enter both name and phone number',
-        status: 'error',
-        duration: 3000,
-      });
-      return;
-    }
-
-    // Format phone number to E.164 format
-    let formattedPhone = newContact.phone.replace(/\D/g, '');
-    if (!formattedPhone.startsWith('1')) {
-      formattedPhone = '1' + formattedPhone;
-    }
-    formattedPhone = '+' + formattedPhone;
-
-    setContacts(prev => [...prev, { ...newContact, phone: formattedPhone }]);
-    setNewContact({ name: '', phone: '' });
-    onClose();
+  const handleAddContact = (newContact) => {
+    setContacts(prev => [...prev, newContact]);
+    toast({
+      title: 'Contact Added',
+      description: `Added ${newContact.name} to contacts`,
+      status: 'success',
+      duration: 3000,
+    });
   };
 
   return (
     <Box p={4} maxW="600px" mx="auto">
       <VStack spacing={4} align="stretch">
         {/* Contact Selection */}
-        <HStack>
-          <Select
-            placeholder="Select contact"
-            value={selectedContact?.phone || ''}
-            onChange={(e) => {
-              const contact = contacts.find(c => c.phone === e.target.value);
-              setSelectedContact(contact);
-            }}
-          >
-            {contacts.map(contact => (
-              <option key={contact.phone} value={contact.phone}>
-                {contact.name} ({contact.phone})
-              </option>
-            ))}
-          </Select>
-          <Button onClick={onOpen}>Add Contact</Button>
-        </HStack>
+        <ContactSelect
+          contacts={contacts}
+          selectedContact={selectedContact}
+          onSelectContact={setSelectedContact}
+          onAddContact={onOpen}
+        />
 
         {/* Messages */}
         <Box
@@ -185,37 +153,11 @@ export const TestChat = () => {
       </VStack>
 
       {/* Add Contact Modal */}
-      <Modal isOpen={isOpen} onClose={onClose}>
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>Add Contact</ModalHeader>
-          <ModalCloseButton />
-          <ModalBody pb={6}>
-            <FormControl>
-              <FormLabel>Name</FormLabel>
-              <Input
-                value={newContact.name}
-                onChange={(e) => setNewContact(prev => ({ ...prev, name: e.target.value }))}
-                placeholder="Contact name"
-              />
-            </FormControl>
-
-            <FormControl mt={4}>
-              <FormLabel>Phone Number</FormLabel>
-              <Input
-                value={newContact.phone}
-                onChange={(e) => setNewContact(prev => ({ ...prev, phone: e.target.value }))}
-                placeholder="Phone number (e.g., 16267888830)"
-              />
-            </FormControl>
-
-            <Button mt={4} colorScheme="blue" mr={3} onClick={addContact}>
-              Save
-            </Button>
-            <Button mt={4} onClick={onClose}>Cancel</Button>
-          </ModalBody>
-        </ModalContent>
-      </Modal>
+      <AddContactModal
+        isOpen={isOpen}
+        onClose={onClose}
+        onAddContact={handleAddContact}
+      />
     </Box>
   );
 };
