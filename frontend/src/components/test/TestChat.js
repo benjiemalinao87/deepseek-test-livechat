@@ -1,17 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import {
   Box,
-  VStack,
+  Grid,
+  GridItem,
   Input,
   Button,
   Text,
   useToast,
   Container,
   Heading,
-  Divider,
   Flex,
+  VStack,
+  HStack,
+  Avatar,
+  IconButton,
+  InputGroup,
+  InputLeftElement,
+  Badge,
+  Divider,
+  Menu,
+  MenuButton,
+  MenuList,
+  MenuItem,
 } from '@chakra-ui/react';
 import { socket } from '../../socket';
+import { SearchIcon, ChevronDownIcon, CloseIcon } from '@chakra-ui/icons';
+import { BsEmojiSmile, BsPaperclip, BsMic, BsCalendarEvent, BsThreeDots } from 'react-icons/bs';
 
 export const TestChat = () => {
   const [phone, setPhone] = useState('');
@@ -21,7 +35,6 @@ export const TestChat = () => {
   const toast = useToast();
 
   useEffect(() => {
-    // Socket connection status
     socket.on('connect', () => {
       console.log('✅ Connected to socket');
       setIsConnected(true);
@@ -32,30 +45,14 @@ export const TestChat = () => {
       setIsConnected(false);
     });
 
-    // Debug connection test
-    socket.on('connection_test', (data) => {
-      console.log('🔌 Connection test:', data);
-      toast({
-        title: 'Socket Connected',
-        description: `Socket ID: ${data.socketId}`,
-        status: 'success',
-        duration: 3000,
-      });
-    });
-
-    // Listen for new messages
     socket.on('new_message', (data) => {
       console.log('📥 Received message:', data);
-      
-      // Validate message data
       if (!data || !data.message) {
         console.warn('⚠️ Invalid message data:', data);
         return;
       }
 
-      // Add message to state
       setMessages(prev => {
-        // Check for duplicates
         const isDuplicate = prev.some(m => 
           m.messageSid === data.messageSid || 
           (m.timestamp === data.timestamp && m.message === data.message)
@@ -71,7 +68,6 @@ export const TestChat = () => {
         return newMessages;
       });
 
-      // Show notification for inbound messages
       if (data.direction === 'inbound') {
         toast({
           title: 'New Message',
@@ -82,11 +78,9 @@ export const TestChat = () => {
       }
     });
 
-    // Cleanup
     return () => {
       socket.off('connect');
       socket.off('disconnect');
-      socket.off('connection_test');
       socket.off('new_message');
     };
   }, [toast]);
@@ -122,9 +116,8 @@ export const TestChat = () => {
       const data = await response.json();
       
       if (data.success) {
-        // Create outbound message object
         const outboundMessage = {
-          from: '+13256665486', // Twilio number
+          from: '+13256665486',
           to: phone,
           message: message.trim(),
           timestamp: new Date().toISOString(),
@@ -133,25 +126,18 @@ export const TestChat = () => {
           status: data.status
         };
 
-        // Add to messages state
         setMessages(prev => {
           const isDuplicate = prev.some(m => 
             m.messageSid === data.messageSid || 
             (m.timestamp === outboundMessage.timestamp && m.message === outboundMessage.message)
           );
           
-          if (isDuplicate) {
-            console.log('📝 Duplicate message, skipping');
-            return prev;
-          }
+          if (isDuplicate) return prev;
 
-          console.log('📝 Adding outbound message to history:', outboundMessage);
           return [...prev, outboundMessage];
         });
 
-        // Clear input
         setMessage('');
-        
         toast({
           title: 'Message sent',
           status: 'success',
@@ -172,85 +158,225 @@ export const TestChat = () => {
   };
 
   return (
-    <Container maxW="container.sm" py={5}>
-      <VStack spacing={4} align="stretch">
-        <Heading size="md">Test Chat</Heading>
-        <Text color={isConnected ? 'green.500' : 'red.500'}>
-          Status: {isConnected ? 'Connected' : 'Disconnected'}
-        </Text>
-
-        <Box>
-          <Input
-            placeholder="Enter phone number (e.g., +1234567890)"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            mb={2}
-          />
-        </Box>
-
-        <Box 
-          h="400px" 
-          border="1px" 
-          borderColor="gray.200" 
-          borderRadius="md" 
-          overflowY="auto"
-          p={4}
-          display="flex"
-          flexDirection="column"
-          gap={2}
-        >
-          {messages.map((msg, index) => {
-            const isOutbound = msg.direction === 'outbound';
-            return (
-              <Flex
-                key={index}
-                w="100%"
-                justify={isOutbound ? 'flex-end' : 'flex-start'}
-              >
-                <Box
-                  maxW="80%"
-                  bg={isOutbound ? 'blue.500' : 'gray.100'}
-                  color={isOutbound ? 'white' : 'black'}
-                  p={3}
-                  borderRadius="lg"
-                  borderTopRightRadius={isOutbound ? '4px' : 'lg'}
-                  borderTopLeftRadius={!isOutbound ? '4px' : 'lg'}
-                >
-                  <Text fontSize="xs" color={isOutbound ? 'blue.100' : 'gray.500'} mb={1}>
-                    {isOutbound ? 'You' : msg.from}
-                  </Text>
-                  <Text>{msg.message}</Text>
-                  <Text 
-                    fontSize="xs" 
-                    color={isOutbound ? 'blue.100' : 'gray.500'}
-                    textAlign="right"
-                    mt={1}
+    <Box h="100vh" bg="gray.50">
+      <Grid
+        templateColumns="300px 1fr 300px"
+        h="100%"
+        gap={0}
+        bg="white"
+        shadow="lg"
+        rounded="lg"
+        overflow="hidden"
+      >
+        {/* Left Panel - User List */}
+        <GridItem borderRight="1px" borderColor="gray.200" bg="white">
+          <VStack h="100%" spacing={0}>
+            <Box p={4} w="100%" borderBottom="1px" borderColor="gray.200">
+              <InputGroup>
+                <InputLeftElement pointerEvents="none">
+                  <SearchIcon color="gray.400" />
+                </InputLeftElement>
+                <Input
+                  placeholder="Search conversations"
+                  variant="filled"
+                  bg="gray.100"
+                  _focus={{ bg: 'white' }}
+                />
+              </InputGroup>
+            </Box>
+            
+            <Box p={2} w="100%">
+              <HStack justify="space-between" px={2}>
+                <Menu>
+                  <MenuButton
+                    as={Button}
+                    rightIcon={<ChevronDownIcon />}
+                    size="sm"
+                    variant="ghost"
                   >
-                    {new Date(msg.timestamp).toLocaleTimeString()}
-                  </Text>
-                </Box>
-              </Flex>
-            );
-          })}
-        </Box>
+                    All
+                  </MenuButton>
+                  <MenuList>
+                    <MenuItem>All Messages</MenuItem>
+                    <MenuItem>Unread</MenuItem>
+                    <MenuItem>Archived</MenuItem>
+                  </MenuList>
+                </Menu>
+              </HStack>
+            </Box>
 
-        <Box>
-          <Input
-            placeholder="Type your message"
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-            mb={2}
-          />
-          <Button 
-            colorScheme="blue" 
-            onClick={handleSendMessage}
-            isDisabled={!isConnected || !phone || !message}
-          >
-            Send Message
-          </Button>
-        </Box>
-      </VStack>
-    </Container>
+            <VStack flex={1} w="100%" overflowY="auto" spacing={0} align="stretch">
+              {/* Contact Item */}
+              <Box 
+                p={3} 
+                _hover={{ bg: 'gray.50' }} 
+                cursor="pointer"
+                bg={phone ? 'blue.50' : 'transparent'}
+                onClick={() => setPhone('+16267888830')}
+              >
+                <HStack spacing={3}>
+                  <Avatar size="sm" name="Test User" />
+                  <Box flex={1}>
+                    <HStack justify="space-between">
+                      <Text fontWeight="medium">Test User</Text>
+                      <Text fontSize="xs" color="gray.500">2m ago</Text>
+                    </HStack>
+                    <Text fontSize="sm" color="gray.500" noOfLines={1}>
+                      {messages[messages.length - 1]?.message || 'No messages yet'}
+                    </Text>
+                  </Box>
+                </HStack>
+              </Box>
+            </VStack>
+          </VStack>
+        </GridItem>
+
+        {/* Middle Panel - Chat Area */}
+        <GridItem>
+          <VStack h="100%" spacing={0}>
+            {/* Chat Header */}
+            <Box p={4} w="100%" borderBottom="1px" borderColor="gray.200">
+              <HStack justify="space-between">
+                <HStack>
+                  <Avatar size="sm" name="Test User" />
+                  <Box>
+                    <Text fontWeight="medium">Test User</Text>
+                    <HStack justify="center" mt={2} spacing={2}>
+                      <Badge colorScheme="green">CUSTOMER</Badge>
+                      <Badge colorScheme="blue">OPEN</Badge>
+                    </HStack>
+                  </Box>
+                </HStack>
+                <IconButton
+                  icon={<CloseIcon />}
+                  variant="ghost"
+                  size="sm"
+                  aria-label="Close chat"
+                />
+              </HStack>
+            </Box>
+
+            {/* Messages Area */}
+            <Box 
+              flex={1} 
+              w="100%" 
+              overflowY="auto" 
+              p={4}
+              bg="gray.50"
+            >
+              <VStack spacing={4} align="stretch">
+                {messages.map((msg, index) => {
+                  const isOutbound = msg.direction === 'outbound';
+                  return (
+                    <Flex
+                      key={index}
+                      justify={isOutbound ? 'flex-end' : 'flex-start'}
+                    >
+                      <Box
+                        maxW="70%"
+                        bg={isOutbound ? 'blue.500' : 'white'}
+                        color={isOutbound ? 'white' : 'black'}
+                        p={3}
+                        rounded="lg"
+                        shadow="sm"
+                      >
+                        <Text>{msg.message}</Text>
+                        <Text 
+                          fontSize="xs" 
+                          color={isOutbound ? 'blue.100' : 'gray.500'}
+                          textAlign="right"
+                          mt={1}
+                        >
+                          {new Date(msg.timestamp).toLocaleTimeString()}
+                        </Text>
+                      </Box>
+                    </Flex>
+                  );
+                })}
+              </VStack>
+            </Box>
+
+            {/* Message Input */}
+            <Box p={4} w="100%" borderTop="1px" borderColor="gray.200">
+              <HStack spacing={2}>
+                <IconButton
+                  icon={<BsEmojiSmile />}
+                  variant="ghost"
+                  aria-label="Add emoji"
+                />
+                <IconButton
+                  icon={<BsPaperclip />}
+                  variant="ghost"
+                  aria-label="Attach file"
+                />
+                <Input
+                  placeholder="Type your message here"
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      handleSendMessage();
+                    }
+                  }}
+                />
+                <IconButton
+                  icon={<BsMic />}
+                  variant="ghost"
+                  aria-label="Voice message"
+                />
+                <Button
+                  colorScheme="blue"
+                  onClick={handleSendMessage}
+                  isDisabled={!message.trim() || !phone}
+                >
+                  Send
+                </Button>
+              </HStack>
+            </Box>
+          </VStack>
+        </GridItem>
+
+        {/* Right Panel - User Details */}
+        <GridItem borderLeft="1px" borderColor="gray.200" bg="white">
+          <VStack h="100%" p={6} spacing={6} align="stretch">
+            <VStack spacing={4} align="center">
+              <Avatar size="xl" name="Test User" />
+              <Box textAlign="center">
+                <Text fontSize="xl" fontWeight="medium">Test User</Text>
+                <HStack justify="center" mt={2} spacing={2}>
+                  <Badge colorScheme="green">CUSTOMER</Badge>
+                  <Badge colorScheme="blue">OPEN</Badge>
+                </HStack>
+              </Box>
+            </VStack>
+
+            <Divider />
+
+            <VStack spacing={4} align="stretch">
+              <Heading size="sm">Contact Information</Heading>
+              <VStack spacing={3} align="stretch">
+                <HStack>
+                  <Text color="gray.500">Phone:</Text>
+                  <Text>{phone || 'Not set'}</Text>
+                </HStack>
+                <HStack>
+                  <Text color="gray.500">Location:</Text>
+                  <Text>San Francisco, CA</Text>
+                </HStack>
+              </VStack>
+            </VStack>
+
+            <Button
+              leftIcon={<BsCalendarEvent />}
+              colorScheme="blue"
+              variant="outline"
+              w="100%"
+            >
+              Schedule Meeting
+            </Button>
+          </VStack>
+        </GridItem>
+      </Grid>
+    </Box>
   );
 };
