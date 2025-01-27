@@ -189,15 +189,17 @@ function App() {
     });
   };
 
-  const filteredMessages = messages.filter(msg => 
-    msg.from === selectedUser || msg.to === selectedUser
-  );
+  // Filter messages for selected user
+  const filteredMessages = messages.filter(msg => {
+    if (!selectedUser) return false;
+    return msg.from === selectedUser.phone || msg.to === selectedUser.phone;
+  });
 
   return (
     <ChakraProvider>
       <Box 
         minH="100vh" 
-        position="relative"
+        bg={isDark ? 'gray.800' : 'gray.50'}
         bgImage="url('https://images.unsplash.com/photo-1506744038136-46273834b3fb?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80')"
         bgSize="cover"
         bgPosition="center"
@@ -216,103 +218,94 @@ function App() {
         
         {/* Content */}
         <Box position="relative" zIndex="1">
-          {/* Dock */}
-          <Box
-            position="fixed"
-            bottom="20px"
-            left="50%"
-            transform="translateX(-50%)"
-            bg={isDark ? 'gray.700' : 'white'}
-            p={2}
-            borderRadius="full"
-            boxShadow="lg"
-            zIndex={1000}
-          >
-            <HStack spacing={4}>
-              <IconButton
-                icon={<MessageCircle />}
-                colorScheme="blue"
-                variant="ghost"
-                isRound
-                onClick={() => setShowChat(true)}
-              />
-              <IconButton
-                icon={isDark ? <Sun /> : <Moon />}
-                onClick={toggleColorMode}
-                variant="ghost"
-                isRound
-              />
-            </HStack>
+          {/* Toggle Test/Main UI */}
+          <Box position="fixed" right="4" top="4">
+            <Button onClick={() => setShowTestChat(!showTestChat)} size="sm" mr={2}>
+              {showTestChat ? 'Show Main UI' : 'Show Test UI'}
+            </Button>
+            <Button onClick={toggleColorMode} size="sm">
+              {isDark ? <Sun size={16} /> : <Moon size={16} />}
+            </Button>
           </Box>
 
-          {/* Chat Window */}
-          {showChat && (
-            <DockWindow title="LiveChat" onClose={() => setShowChat(false)}>
-              <Box h="100%" display="flex">
-                {/* Left Panel */}
-                <Box w="300px" borderRight="1px solid" borderColor={isDark ? 'gray.700' : 'gray.200'}>
-                  <VStack h="100%" spacing={0}>
-                    <Box p={4} w="100%">
-                      <IconButton
-                        icon={<Plus />}
-                        onClick={() => setShowAddContact(true)}
-                        size="sm"
-                        colorScheme="blue"
-                        variant="ghost"
-                        isRound
-                      />
-                    </Box>
-                    <UserList
-                      users={users}
-                      selectedUser={selectedUser}
-                      onSelectUser={setSelectedUser}
-                      messages={messages}
-                    />
-                  </VStack>
-                </Box>
-
-                {/* Right Panel */}
-                <Box flex="1" display="flex" flexDirection="column">
-                  <MessageList messages={filteredMessages} />
-                  <MessageInput
-                    message={message}
-                    onChange={setMessage}
-                    onSend={handleSendMessage}
-                  />
-                </Box>
-              </Box>
-            </DockWindow>
-          )}
-
-          {/* Add Contact Modal */}
-          {showAddContact && (
-            <ContactForm
-              isOpen={showAddContact}
-              onClose={() => setShowAddContact(false)}
-              onAddContact={handleAddContact}
-              isDark={isDark}
-            />
-          )}
-        </Box>
-        
-        {/* Test Chat Toggle */}
-        <Box position="fixed" right="4" top="4">
-          <Button onClick={toggleColorMode} size="sm">
-            {isDark ? <Sun size={16} /> : <Moon size={16} />}
-          </Button>
-        </Box>
-        
-        <VStack spacing={4} p={4}>
-          <Button onClick={() => setShowTestChat(!showTestChat)}>
-            {showTestChat ? 'Show Dock UI' : 'Show Test Chat'}
-          </Button>
-          
           {showTestChat ? (
             <TestChat />
           ) : (
-            <DockWindow />
+            <>
+              {/* Dock */}
+              <Box
+                position="fixed"
+                bottom="20px"
+                left="50%"
+                transform="translateX(-50%)"
+                bg={isDark ? 'gray.700' : 'white'}
+                p={2}
+                borderRadius="full"
+                boxShadow="lg"
+                zIndex={1000}
+              >
+                <HStack spacing={4}>
+                  <IconButton
+                    icon={<MessageCircle />}
+                    colorScheme="blue"
+                    variant="ghost"
+                    isRound
+                    onClick={() => setShowChat(true)}
+                  />
+                </HStack>
+              </Box>
+
+              {/* Chat Window */}
+              {showChat && (
+                <DockWindow title="LiveChat" onClose={() => setShowChat(false)}>
+                  <Box h="100%" display="flex">
+                    {/* Left Panel */}
+                    <Box w="300px" borderRight="1px solid" borderColor={isDark ? 'gray.700' : 'gray.200'}>
+                      <VStack h="100%" spacing={0}>
+                        <Box p={4} w="100%">
+                          <IconButton
+                            icon={<Plus />}
+                            onClick={() => setShowAddContact(true)}
+                            size="sm"
+                            colorScheme="blue"
+                            variant="ghost"
+                            isRound
+                          />
+                        </Box>
+                        <UserList
+                          users={users}
+                          selectedUser={selectedUser}
+                          onSelectUser={setSelectedUser}
+                          messages={messages}
+                        />
+                      </VStack>
+                    </Box>
+
+                    {/* Right Panel */}
+                    <Box flex="1" display="flex" flexDirection="column">
+                      <MessageList messages={filteredMessages} />
+                      <MessageInput
+                        message={message}
+                        onChange={setMessage}
+                        onSend={handleSendMessage}
+                      />
+                    </Box>
+                  </Box>
+                </DockWindow>
+              )}
+
+              {/* Add Contact Modal */}
+              {showAddContact && (
+                <ContactForm
+                  isOpen={showAddContact}
+                  onClose={() => setShowAddContact(false)}
+                  onAddContact={handleAddContact}
+                  isDark={isDark}
+                />
+              )}
+            </>
           )}
-        </VStack>
+        </Box>
       </Box>
     </ChakraProvider>
   );
