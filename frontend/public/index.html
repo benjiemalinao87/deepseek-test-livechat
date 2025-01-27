@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light" style="color-scheme: light;">
   <head>
     <meta charset="utf-8" />
     <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
@@ -13,8 +13,34 @@
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
     <script src="%PUBLIC_URL%/config.js"></script>
     <title>LiveChat App</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        min-height: 100vh;
+        background-image: url('https://images.unsplash.com/photo-1506744038136-46273834b3fb?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80');
+        background-size: cover;
+        background-position: center;
+        position: relative;
+      }
+      body::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        background: rgba(255, 255, 255, 0.7);
+        backdrop-filter: blur(1px);
+        z-index: 0;
+      }
+      #root {
+        position: relative;
+        z-index: 1;
+      }
+    </style>
   </head>
-  <body>
+  <body class="chakra-ui-light">
     <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="root"></div>
   </body>
