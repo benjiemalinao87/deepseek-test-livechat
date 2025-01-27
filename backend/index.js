@@ -129,12 +129,21 @@ app.post('/message-status', (req, res) => {
 // Twilio webhook for incoming messages
 app.post('/twilio', (req, res) => {
   try {
-    console.log('🔔 Received webhook from Twilio:', {
+    // Log the entire request for debugging
+    console.log('🔍 Webhook Debug:', {
+      headers: req.headers,
+      body: req.body,
+      method: req.method,
+      url: req.url
+    });
+    
+    // Log the specific message data
+    console.log('📥 Received webhook from Twilio:', {
       from: req.body.From,
       to: req.body.To,
       body: req.body.Body,
       messageSid: req.body.MessageSid,
-      rawBody: req.body // Log full request body for debugging
+      rawBody: req.body
     });
     
     const { From: from, To: to, Body: message, MessageSid: messageSid } = req.body;
@@ -155,26 +164,30 @@ app.post('/twilio', (req, res) => {
       messageSid
     };
     
-    // Broadcast to all connected clients
-    console.log('📡 Broadcasting message to clients:', messageData);
-    io.emit('new_message', messageData);
-    
-    // Log connected clients for debugging
+    // Log connected socket clients
     const connectedSockets = Array.from(io.sockets.sockets.keys());
-    console.log('🔌 Connected clients:', {
+    console.log('🔌 Socket Clients:', {
       count: connectedSockets.length,
       socketIds: connectedSockets
     });
+    
+    // Broadcast to all connected clients
+    console.log('📡 Broadcasting message:', messageData);
+    io.emit('new_message', messageData);
+    
+    // Log successful broadcast
+    console.log('✅ Message broadcast complete');
 
     // Send TwiML response
+    const twimlResponse = '<Response></Response>';
+    console.log('📤 Sending TwiML response:', twimlResponse);
     res.type('text/xml');
-    res.send('<Response></Response>');
-    
-    console.log('✅ Successfully processed webhook');
+    res.send(twimlResponse);
   } catch (error) {
-    console.error('❌ Error handling webhook:', {
+    console.error('❌ Webhook Error:', {
       error: error.message,
-      stack: error.stack
+      stack: error.stack,
+      body: req.body
     });
     res.status(500).send('<Response></Response>');
   }
