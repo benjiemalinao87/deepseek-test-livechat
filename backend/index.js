@@ -11,10 +11,8 @@ const server = http.createServer(app);
 // Configure CORS for both Express and Socket.IO
 const corsOptions = {
   origin: [
-    "https://cc1.automate8.com",
-    "https://cc.automate8.com",
-    "http://localhost:3000",
-    "https://deepseek-test-livechat-production.up.railway.app"
+    "https://cc1.automate8.com",  // Frontend
+    "http://localhost:3000"       // Local development
   ],
   methods: ['GET', 'POST', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
@@ -32,10 +30,8 @@ const io = new Server(server, {
   path: '/socket.io',
   cors: {
     origin: [
-      "https://cc1.automate8.com",
-      "https://cc.automate8.com",
-      "http://localhost:3000",
-      "https://deepseek-test-livechat-production.up.railway.app"
+      "https://cc1.automate8.com",  // Frontend
+      "http://localhost:3000"       // Local development
     ],
     methods: ["GET", "POST"],
     allowedHeaders: ["Content-Type", "Authorization"],

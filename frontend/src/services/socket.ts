@@ -1,7 +1,8 @@
 import { io, Socket } from 'socket.io-client';
 import { Message } from '../types';
 
-const SOCKET_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+// Use the backend domain for socket connection
+const SOCKET_URL = 'https://cc.automate8.com';
 
 class SocketService {
   private socket: Socket | null = null;
@@ -9,6 +10,7 @@ class SocketService {
 
   connect() {
     if (!this.socket) {
+      console.log(' Connecting to socket server:', SOCKET_URL);
       this.socket = io(SOCKET_URL, {
         transports: ['polling', 'websocket'],
         withCredentials: true,
