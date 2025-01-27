@@ -38,17 +38,15 @@ function App() {
           if (rawData && typeof rawData === 'object') {
             console.log('📦 Processing message object:', rawData);
             
-            // Extract the message content
-            const messageContent = rawData.Body || rawData.message || rawData.text || '';
-            const fromNumber = rawData.From || rawData.from || '';
-            const toNumber = rawData.To || rawData.to || '';
-            
+            // Use the message data directly as it's already formatted by the backend
             messageData = {
-              from: fromNumber,
-              to: toNumber,
-              message: messageContent,
-              timestamp: new Date().toISOString(),
-              direction: 'inbound'
+              from: rawData.from,
+              to: rawData.to,
+              message: rawData.message,
+              timestamp: rawData.timestamp || new Date().toISOString(),
+              direction: rawData.direction || 'inbound',
+              messageSid: rawData.messageSid,
+              status: rawData.status
             };
             
             console.log('✨ Formatted message:', messageData);
@@ -64,7 +62,17 @@ function App() {
           }
 
           console.log('✨ Adding message to UI:', messageData);
-          setMessages(prev => [...prev, messageData]);
+          
+          // Update messages state with the new message
+          setMessages(prev => {
+            // Check if message already exists to prevent duplicates
+            const exists = prev.some(m => m.messageSid === messageData.messageSid);
+            if (exists) {
+              console.log('📝 Message already exists, skipping:', messageData.messageSid);
+              return prev;
+            }
+            return [...prev, messageData];
+          });
           
           // Show notification for inbound messages
           toast({

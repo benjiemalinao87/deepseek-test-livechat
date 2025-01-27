@@ -127,15 +127,24 @@ app.post('/message-status', (req, res) => {
 });
 
 // Twilio webhook for incoming messages
-app.post('/twilio', (req, res) => {
+app.post('/twilio', express.urlencoded({ extended: true }), (req, res) => {
   try {
     // Log the entire request for debugging
     console.log('🔍 Webhook Debug:', {
       headers: req.headers,
+      rawBody: req.rawBody,
       body: req.body,
       method: req.method,
-      url: req.url
+      url: req.url,
+      contentType: req.headers['content-type']
     });
+    
+    // Ensure we have the body data
+    if (!req.body || Object.keys(req.body).length === 0) {
+      console.error('❌ Empty request body');
+      res.status(400).send('<?xml version="1.0" encoding="UTF-8"?><Response></Response>');
+      return;
+    }
     
     // Log the specific message data
     console.log('📥 Received webhook from Twilio:', {
@@ -143,33 +152,39 @@ app.post('/twilio', (req, res) => {
       to: req.body.To,
       body: req.body.Body,
       messageSid: req.body.MessageSid,
-      rawBody: req.body
+      smsStatus: req.body.SmsStatus,
+      numMedia: req.body.NumMedia
     });
     
-    const { From: from, To: to, Body: message, MessageSid: messageSid } = req.body;
+    const messageData = {
+      from: req.body.From,
+      to: req.body.To,
+      message: req.body.Body || '',  // Ensure message is not undefined
+      timestamp: new Date().toISOString(),
+      direction: 'inbound',
+      messageSid: req.body.MessageSid,
+      status: req.body.SmsStatus || 'received'
+    };
     
     // Validate required fields
-    if (!from || !message) {
-      console.error('❌ Missing required fields:', { from, message });
-      res.status(400).send('<Response></Response>');
+    if (!messageData.from || !messageData.message) {
+      console.error('❌ Missing required fields:', messageData);
+      res.status(400).send('<?xml version="1.0" encoding="UTF-8"?><Response></Response>');
       return;
     }
-    
-    const messageData = {
-      from,
-      to,
-      message,
-      timestamp: new Date(),
-      direction: 'inbound',
-      messageSid
-    };
     
     // Log connected socket clients
     const connectedSockets = Array.from(io.sockets.sockets.keys());
     console.log('🔌 Socket Clients:', {
       count: connectedSockets.length,
-      socketIds: connectedSockets
+      socketIds: connectedSockets,
+      namespaces: Object.keys(io.nsps)
     });
+    
+    // Check if we have any connected clients
+    if (connectedSockets.length === 0) {
+      console.warn('⚠️ No connected socket clients to broadcast to');
+    }
     
     // Broadcast to all connected clients
     console.log('📡 Broadcasting message:', messageData);
@@ -179,17 +194,18 @@ app.post('/twilio', (req, res) => {
     console.log('✅ Message broadcast complete');
 
     // Send TwiML response
-    const twimlResponse = '<Response></Response>';
-    console.log('📤 Sending TwiML response:', twimlResponse);
-    res.type('text/xml');
+    const twimlResponse = '<?xml version="1.0" encoding="UTF-8"?><Response></Response>';
+    res.set('Content-Type', 'text/xml');
     res.send(twimlResponse);
+    
+    console.log('📤 Sent TwiML response');
   } catch (error) {
     console.error('❌ Webhook Error:', {
       error: error.message,
       stack: error.stack,
       body: req.body
     });
-    res.status(500).send('<Response></Response>');
+    res.status(500).send('<?xml version="1.0" encoding="UTF-8"?><Response></Response>');
   }
 });
 
