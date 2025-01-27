@@ -181,7 +181,7 @@ function App() {
           left="0"
           right="0"
           bottom="0"
-          bg={isDark ? 'rgba(26, 32, 44, 0.7)' : 'rgba(255, 255, 255, 0.7)'}
+          bg={isDark ? 'rgba(26, 32, 44, 0.3)' : 'transparent'}
           zIndex="0"
         />
         
