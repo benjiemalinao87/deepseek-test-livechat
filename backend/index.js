@@ -39,25 +39,51 @@ io.on('connection', (socket) => {
   console.log('🔌 New socket connection:', {
     id: socket.id,
     transport: socket.conn.transport.name,
-    query: socket.handshake.query,
     time: new Date().toISOString()
   });
 
-  // Debug event for testing socket connection
-  socket.emit('connection_test', { status: 'connected', socketId: socket.id });
+  socket.on('register', (phoneNumber) => {
+    if (!phoneNumber) {
+      console.warn('⚠️ Invalid phone number registration attempt');
+      return;
+    }
+
+    console.log('📱 Registering phone:', { phoneNumber, socketId: socket.id });
+    
+    // Store both socket->phone and phone->socket mappings
+    socket.phoneNumber = phoneNumber;
+    users.set(phoneNumber, socket.id);
+    
+    console.log('✅ Phone registered:', { 
+      phoneNumber, 
+      socketId: socket.id,
+      totalUsers: users.size,
+      registeredPhones: Array.from(users.keys())
+    });
+    
+    socket.emit('registered', { 
+      status: 'success', 
+      phoneNumber,
+      socketId: socket.id 
+    });
+  });
 
   socket.on('disconnect', (reason) => {
     console.log('🔌 Socket disconnected:', {
       id: socket.id,
+      phone: socket.phoneNumber,
       reason,
       time: new Date().toISOString()
     });
-  });
 
-  socket.on('register', (phoneNumber) => {
-    users.set(phoneNumber, socket.id);
-    console.log(`User ${phoneNumber} registered with socket ${socket.id}`);
-    socket.emit('registered', { status: 'success', phoneNumber });
+    // Clean up user registration
+    if (socket.phoneNumber) {
+      users.delete(socket.phoneNumber);
+      console.log('🗑️ Removed registration:', {
+        phone: socket.phoneNumber,
+        remainingUsers: Array.from(users.keys())
+      });
+    }
   });
 });
 
@@ -75,7 +101,6 @@ app.post('/twilio', express.urlencoded({ extended: true }), (req, res) => {
   try {
     console.log('📥 Received webhook from Twilio:', {
       body: req.body,
-      headers: req.headers,
       timestamp: new Date().toISOString()
     });
 
@@ -89,44 +114,41 @@ app.post('/twilio', express.urlencoded({ extended: true }), (req, res) => {
       status: req.body.SmsStatus || 'received'
     };
 
-    // Log connected sockets before broadcast
-    const connectedSockets = Array.from(io.sockets.sockets.keys());
-    console.log('🔌 Active socket connections:', {
-      count: connectedSockets.length,
-      sockets: connectedSockets
+    // Log registered users
+    console.log('📊 Registered users:', {
+      users: Array.from(users.entries()),
+      messageFrom: messageData.from,
+      messageTo: messageData.to
     });
 
-    // Find the socket ID for the recipient
-    const recipientSocketId = users.get(messageData.to);
-    console.log('🎯 Found recipient socket:', {
-      phoneNumber: messageData.to,
-      socketId: recipientSocketId
+    // Find sockets for both sender and recipient
+    const senderSocket = users.get(messageData.from);
+    const recipientSocket = users.get(messageData.to);
+
+    console.log('🎯 Found sockets:', {
+      sender: senderSocket,
+      recipient: recipientSocket
     });
 
-    // Broadcast to specific user if found, otherwise broadcast to all
-    if (recipientSocketId) {
-      io.to(recipientSocketId).emit('new_message', messageData, (error) => {
-        if (error) {
-          console.error('❌ Direct message error:', error);
-        } else {
-          console.log('✅ Direct message sent to:', recipientSocketId);
-        }
-      });
-    } else {
-      // Broadcast to all as fallback
-      io.emit('new_message', messageData, (error) => {
-        if (error) {
-          console.error('❌ Broadcast error:', error);
-        } else {
-          console.log('✅ Message broadcast successful');
-        }
-      });
+    // Send to both sender and recipient sockets if found
+    if (senderSocket) {
+      io.to(senderSocket).emit('new_message', messageData);
+      console.log('✅ Sent to sender:', senderSocket);
     }
 
-    // Send TwiML response
-    const twimlResponse = '<?xml version="1.0" encoding="UTF-8"?><Response></Response>';
+    if (recipientSocket) {
+      io.to(recipientSocket).emit('new_message', messageData);
+      console.log('✅ Sent to recipient:', recipientSocket);
+    }
+
+    // If neither socket found, broadcast to all
+    if (!senderSocket && !recipientSocket) {
+      console.log('⚠️ No specific sockets found, broadcasting');
+      io.emit('new_message', messageData);
+    }
+
     res.set('Content-Type', 'text/xml');
-    res.send(twimlResponse);
+    res.send('<?xml version="1.0" encoding="UTF-8"?><Response></Response>');
 
   } catch (error) {
     console.error('❌ Webhook Error:', error);

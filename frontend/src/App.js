@@ -25,29 +25,35 @@ function App() {
 
   const isDark = colorMode === 'dark';
 
-  // Socket event handlers
+  // Register phone number when user is selected
   useEffect(() => {
-    socket.on('connect', () => {
-      console.log('✅ Connected to socket');
-      setConnected(true);
-      toast({
-        title: 'Connected',
-        description: `Socket ID: ${socket.id}`,
-        status: 'success',
-        duration: 3000,
+    if (selectedUser?.phone) {
+      // Register the Twilio number to receive messages
+      const twilioNumber = '+13256665486';
+      console.log('📱 Registering numbers:', {
+        twilio: twilioNumber,
+        user: selectedUser.phone
       });
-    });
+      
+      // Register both numbers to receive messages
+      socket.emit('register', twilioNumber);
+      socket.emit('register', selectedUser.phone);
 
-    socket.on('disconnect', () => {
-      console.log('❌ Disconnected from socket');
-      setConnected(false);
-      toast({
-        title: 'Disconnected',
-        status: 'warning',
-        duration: 3000,
+      socket.on('registered', (data) => {
+        console.log('✅ Number registered:', data);
+        toast({
+          title: 'Chat Ready',
+          description: `Connected to ${selectedUser.name}`,
+          status: 'success',
+          duration: 3000,
+        });
       });
-    });
+    }
+    return () => socket.off('registered');
+  }, [selectedUser, toast]);
 
+  // Handle messages
+  useEffect(() => {
     socket.on('new_message', (data) => {
       console.log('📥 Received message:', data);
       
@@ -86,12 +92,38 @@ function App() {
       }
     });
 
+    return () => socket.off('new_message');
+  }, [toast]);
+
+  // Connection status
+  useEffect(() => {
+    socket.on('connect', () => {
+      console.log('✅ Connected to socket');
+      setConnected(true);
+
+      // Re-register numbers if user is selected
+      if (selectedUser?.phone) {
+        const twilioNumber = '+13256665486';
+        socket.emit('register', twilioNumber);
+        socket.emit('register', selectedUser.phone);
+      }
+    });
+
+    socket.on('disconnect', () => {
+      console.log('❌ Disconnected from socket');
+      setConnected(false);
+      toast({
+        title: 'Disconnected',
+        status: 'warning',
+        duration: 3000,
+      });
+    });
+
     return () => {
       socket.off('connect');
       socket.off('disconnect');
-      socket.off('new_message');
     };
-  }, [toast]);
+  }, [selectedUser, toast]);
 
   const handleSendMessage = async () => {
     if (!selectedUser || !message.trim()) return;
