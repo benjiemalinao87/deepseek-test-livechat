@@ -34,38 +34,27 @@ function App() {
           // Extract message data
           let messageData;
           
-          // Check if rawData is an array
-          if (Array.isArray(rawData)) {
-            console.log('📦 Processing array data:', rawData[0]);
+          // Handle different message formats
+          if (rawData && typeof rawData === 'object') {
+            console.log('📦 Processing message object:', rawData);
+            
+            // Extract the message content
+            const messageContent = rawData.Body || rawData.message || rawData.text || '';
+            const fromNumber = rawData.From || rawData.from || '';
+            const toNumber = rawData.To || rawData.to || '';
+            
             messageData = {
-              from: rawData[0].from,
-              to: rawData[0].to,
-              message: rawData[0].message,
-              timestamp: rawData[0].timestamp || new Date().toISOString(),
+              from: fromNumber,
+              to: toNumber,
+              message: messageContent,
+              timestamp: new Date().toISOString(),
               direction: 'inbound'
             };
-          } 
-          // Check if rawData has data array
-          else if (rawData.data && Array.isArray(rawData.data)) {
-            console.log('📦 Processing data array:', rawData.data[0]);
-            messageData = {
-              from: rawData.data[0].from,
-              to: rawData.data[0].to,
-              message: rawData.data[0].message,
-              timestamp: rawData.data[0].timestamp || new Date().toISOString(),
-              direction: 'inbound'
-            };
-          }
-          // Handle direct message object
-          else {
-            console.log('📦 Processing direct message:', rawData);
-            messageData = {
-              from: rawData.from,
-              to: rawData.to,
-              message: rawData.message,
-              timestamp: rawData.timestamp || new Date().toISOString(),
-              direction: 'inbound'
-            };
+            
+            console.log('✨ Formatted message:', messageData);
+          } else {
+            console.warn('⚠️ Unexpected message format:', rawData);
+            return;
           }
           
           // Validate message
@@ -80,7 +69,7 @@ function App() {
           // Show notification for inbound messages
           toast({
             title: 'New Message',
-            description: `From: ${messageData.from}`,
+            description: `From: ${messageData.from}\n${messageData.message}`,
             status: 'info',
             duration: 3000,
             isClosable: true,
