@@ -64,14 +64,29 @@ function App() {
     if (!selectedUser || !message.trim()) return;
 
     try {
-      const response = await axios.post(`${process.env.REACT_APP_API_URL}/send-sms`, {
-        to: selectedUser,
-        message: message.trim()
+      const response = await fetch('https://cc1.automate8.com/api/sms', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          to: selectedUser,
+          message: message.trim()
+        })
       });
 
-      if (response.data.success) {
-        setMessage('');
+      if (!response.ok) {
+        throw new Error('Failed to send message');
       }
+
+      setMessage('');
+      toast({
+        title: 'Message Sent',
+        description: 'SMS sent successfully',
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      });
     } catch (error) {
       console.error('Error sending message:', error);
       toast({
