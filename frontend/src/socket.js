@@ -1,7 +1,8 @@
 import { io } from 'socket.io-client';
 
+// Use the same URL as the webhook
 const SOCKET_URL = 'https://cc.automate8.com';
-console.log('Initializing socket connection to:', SOCKET_URL);
+console.log('🔌 Connecting to socket server:', SOCKET_URL);
 
 export const socket = io(SOCKET_URL, {
   autoConnect: true,
@@ -14,7 +15,8 @@ export const socket = io(SOCKET_URL, {
   forceNew: true,
   query: {
     client: 'web',
-    version: '1.0.0'
+    version: '1.0.0',
+    type: 'livechat'
   }
 });
 
@@ -49,7 +51,9 @@ socket.onAny((eventName, ...args) => {
   console.log('📨 Socket event received:', {
     event: eventName,
     data: args,
-    time: new Date().toISOString()
+    time: new Date().toISOString(),
+    socketId: socket.id,
+    connected: socket.connected
   });
 });
 
@@ -59,7 +63,8 @@ socket.emit = function(...args) {
   console.log('📤 Socket event sent:', {
     event: args[0],
     data: args.slice(1),
-    time: new Date().toISOString()
+    time: new Date().toISOString(),
+    socketId: socket.id
   });
   emit.apply(this, args);
 };
