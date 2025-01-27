@@ -1,221 +1,221 @@
 import React, { useState, useEffect } from 'react';
 import {
   Box,
-  VStack,
   Input,
   Button,
+  VStack,
+  HStack,
   Text,
   useToast,
-  Container,
-  Heading,
-  Divider,
-  Flex,
+  Select,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalCloseButton,
+  FormControl,
+  FormLabel,
+  useDisclosure,
 } from '@chakra-ui/react';
 import { socket } from '../../socket';
 
 export const TestChat = () => {
-  const [phone, setPhone] = useState('');
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState([]);
-  const [isConnected, setIsConnected] = useState(false);
+  const [contacts, setContacts] = useState([
+    { name: 'Benjie', phone: '+16267888830' }
+  ]);
+  const [selectedContact, setSelectedContact] = useState(null);
+  const [newContact, setNewContact] = useState({ name: '', phone: '' });
+  const { isOpen, onOpen, onClose } = useDisclosure();
   const toast = useToast();
 
+  // Register Twilio number on mount
   useEffect(() => {
-    // Socket connection status
-    socket.on('connect', () => {
-      console.log('✅ Connected to socket');
-      setIsConnected(true);
+    const twilioNumber = '+13256665486';
+    socket.emit('register', twilioNumber);
+    
+    socket.on('registered', (data) => {
+      console.log('✅ Number registered:', data);
     });
 
-    socket.on('disconnect', () => {
-      console.log('❌ Disconnected from socket');
-      setIsConnected(false);
-    });
-
-    // Debug connection test
-    socket.on('connection_test', (data) => {
-      console.log('🔌 Connection test:', data);
-      toast({
-        title: 'Socket Connected',
-        description: `Socket ID: ${data.socketId}`,
-        status: 'success',
-        duration: 3000,
-      });
-    });
-
-    // Listen for new messages
     socket.on('new_message', (data) => {
       console.log('📥 Received message:', data);
-      
-      // Validate message data
-      if (!data || !data.message) {
-        console.warn('⚠️ Invalid message data:', data);
-        return;
-      }
-
-      // Add message to state
-      setMessages(prev => {
-        // Check for duplicates
-        const isDuplicate = prev.some(m => 
-          m.messageSid === data.messageSid || 
-          (m.timestamp === data.timestamp && m.message === data.message)
-        );
-        
-        if (isDuplicate) {
-          console.log('📝 Duplicate message, skipping');
-          return prev;
-        }
-
-        const newMessages = [...prev, data];
-        console.log('📝 Updated messages:', newMessages);
-        return newMessages;
-      });
-
-      // Show notification for inbound messages
-      if (data.direction === 'inbound') {
-        toast({
-          title: 'New Message',
-          description: `From: ${data.from}\n${data.message}`,
-          status: 'info',
-          duration: 3000,
-        });
-      }
+      setMessages(prev => [...prev, data]);
     });
 
-    // Cleanup
     return () => {
-      socket.off('connect');
-      socket.off('disconnect');
-      socket.off('connection_test');
+      socket.off('registered');
       socket.off('new_message');
     };
-  }, [toast]);
+  }, []);
 
   const handleSendMessage = async () => {
-    if (!message || !phone) {
+    if (!selectedContact || !message.trim()) {
       toast({
         title: 'Error',
-        description: 'Please enter both phone number and message',
+        description: 'Please select a contact and enter a message',
         status: 'error',
         duration: 3000,
       });
       return;
     }
 
+    const messageData = {
+      to: selectedContact.phone,
+      message: message.trim(),
+    };
+
     try {
-      const response = await fetch('https://cc.automate8.com/send-sms', {
+      const response = await fetch('http://localhost:3001/send-sms', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          to: phone,
-          message: message,
-        }),
+        body: JSON.stringify(messageData),
       });
 
-      const data = await response.json();
-      
-      if (data.success) {
-        setMessage('');
-        toast({
-          title: 'Message sent',
-          status: 'success',
-          duration: 3000,
-        });
-      } else {
-        throw new Error(data.error || 'Failed to send message');
-      }
+      if (!response.ok) throw new Error('Failed to send message');
+
+      setMessage('');
+      toast({
+        title: 'Message Sent',
+        description: `Message sent to ${selectedContact.name}`,
+        status: 'success',
+        duration: 3000,
+      });
     } catch (error) {
+      console.error('Error sending message:', error);
       toast({
         title: 'Error',
-        description: error.message,
+        description: 'Failed to send message',
         status: 'error',
         duration: 3000,
       });
     }
   };
 
+  const addContact = () => {
+    if (!newContact.name || !newContact.phone) {
+      toast({
+        title: 'Error',
+        description: 'Please enter both name and phone number',
+        status: 'error',
+        duration: 3000,
+      });
+      return;
+    }
+
+    // Format phone number to E.164 format
+    let formattedPhone = newContact.phone.replace(/\D/g, '');
+    if (!formattedPhone.startsWith('1')) {
+      formattedPhone = '1' + formattedPhone;
+    }
+    formattedPhone = '+' + formattedPhone;
+
+    setContacts(prev => [...prev, { ...newContact, phone: formattedPhone }]);
+    setNewContact({ name: '', phone: '' });
+    onClose();
+  };
+
   return (
-    <Container maxW="container.sm" py={5}>
+    <Box p={4} maxW="600px" mx="auto">
       <VStack spacing={4} align="stretch">
-        <Heading size="md">Test Chat</Heading>
-        <Text color={isConnected ? 'green.500' : 'red.500'}>
-          Status: {isConnected ? 'Connected' : 'Disconnected'}
-        </Text>
+        {/* Contact Selection */}
+        <HStack>
+          <Select
+            placeholder="Select contact"
+            value={selectedContact?.phone || ''}
+            onChange={(e) => {
+              const contact = contacts.find(c => c.phone === e.target.value);
+              setSelectedContact(contact);
+            }}
+          >
+            {contacts.map(contact => (
+              <option key={contact.phone} value={contact.phone}>
+                {contact.name} ({contact.phone})
+              </option>
+            ))}
+          </Select>
+          <Button onClick={onOpen}>Add Contact</Button>
+        </HStack>
 
-        <Box>
-          <Input
-            placeholder="Enter phone number (e.g., +1234567890)"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            mb={2}
-          />
-        </Box>
-
-        <Box 
-          h="400px" 
-          border="1px" 
-          borderColor="gray.200" 
-          borderRadius="md" 
-          overflowY="auto"
+        {/* Messages */}
+        <Box
+          borderWidth={1}
+          borderRadius="lg"
           p={4}
-          display="flex"
-          flexDirection="column"
-          gap={2}
+          minH="400px"
+          maxH="400px"
+          overflowY="auto"
         >
-          {messages.map((msg, index) => {
-            const isOutbound = msg.direction === 'outbound';
-            return (
-              <Flex
-                key={index}
-                w="100%"
-                justify={isOutbound ? 'flex-end' : 'flex-start'}
-              >
-                <Box
-                  maxW="80%"
-                  bg={isOutbound ? 'blue.500' : 'gray.100'}
-                  color={isOutbound ? 'white' : 'black'}
-                  p={3}
-                  borderRadius="lg"
-                  borderTopRightRadius={isOutbound ? '4px' : 'lg'}
-                  borderTopLeftRadius={!isOutbound ? '4px' : 'lg'}
-                >
-                  <Text fontSize="xs" color={isOutbound ? 'blue.100' : 'gray.500'} mb={1}>
-                    {isOutbound ? 'You' : msg.from}
-                  </Text>
-                  <Text>{msg.message}</Text>
-                  <Text 
-                    fontSize="xs" 
-                    color={isOutbound ? 'blue.100' : 'gray.500'}
-                    textAlign="right"
-                    mt={1}
-                  >
-                    {new Date(msg.timestamp).toLocaleTimeString()}
-                  </Text>
-                </Box>
-              </Flex>
-            );
-          })}
+          {messages.map((msg, index) => (
+            <Box
+              key={msg.messageSid || index}
+              mb={2}
+              p={2}
+              bg={msg.direction === 'outbound' ? 'blue.100' : 'gray.100'}
+              borderRadius="md"
+              alignSelf={msg.direction === 'outbound' ? 'flex-end' : 'flex-start'}
+            >
+              <Text fontSize="sm" color="gray.500">
+                {msg.direction === 'outbound' ? 'You' : msg.from}
+              </Text>
+              <Text>{msg.message}</Text>
+              <Text fontSize="xs" color="gray.500">
+                {new Date(msg.timestamp).toLocaleTimeString()}
+              </Text>
+            </Box>
+          ))}
         </Box>
 
-        <Box>
+        {/* Message Input */}
+        <HStack>
           <Input
-            placeholder="Type your message"
             value={message}
             onChange={(e) => setMessage(e.target.value)}
+            placeholder="Type your message..."
             onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-            mb={2}
           />
-          <Button 
-            colorScheme="blue" 
-            onClick={handleSendMessage}
-            isDisabled={!isConnected || !phone || !message}
-          >
-            Send Message
+          <Button onClick={handleSendMessage} colorScheme="blue">
+            Send
           </Button>
-        </Box>
+        </HStack>
       </VStack>
-    </Container>
+
+      {/* Add Contact Modal */}
+      <Modal isOpen={isOpen} onClose={onClose}>
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Add Contact</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody pb={6}>
+            <FormControl>
+              <FormLabel>Name</FormLabel>
+              <Input
+                value={newContact.name}
+                onChange={(e) => setNewContact(prev => ({ ...prev, name: e.target.value }))}
+                placeholder="Contact name"
+              />
+            </FormControl>
+
+            <FormControl mt={4}>
+              <FormLabel>Phone Number</FormLabel>
+              <Input
+                value={newContact.phone}
+                onChange={(e) => setNewContact(prev => ({ ...prev, phone: e.target.value }))}
+                placeholder="Phone number (e.g., 16267888830)"
+              />
+            </FormControl>
+
+            <Button mt={4} colorScheme="blue" mr={3} onClick={addContact}>
+              Save
+            </Button>
+            <Button mt={4} onClick={onClose}>Cancel</Button>
+          </ModalBody>
+        </ModalContent>
+      </Modal>
+    </Box>
   );
 };
