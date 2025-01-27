@@ -4,69 +4,40 @@ import { io } from 'socket.io-client';
 const SOCKET_URL = 'https://cc.automate8.com';
 console.log('🔌 Connecting to socket server:', SOCKET_URL);
 
-export const socket = io(SOCKET_URL, {
+const socket = io(SOCKET_URL, {
   autoConnect: true,
-  transports: ['polling', 'websocket'],
-  withCredentials: false,
+  transports: ['websocket', 'polling'],
+  withCredentials: true,
   path: '/socket.io',
   reconnectionAttempts: 5,
   reconnectionDelay: 1000,
   timeout: 20000,
-  forceNew: true,
-  query: {
-    client: 'web',
-    version: '1.0.0',
-    type: 'livechat'
-  }
+  forceNew: true
 });
 
-// Debug socket lifecycle
+// Add socket event listeners for debugging
 socket.on('connect', () => {
-  console.log('✅ Socket connected:', {
-    id: socket.id,
-    url: SOCKET_URL,
-    connected: socket.connected,
-    transport: socket.io.engine.transport.name
+  console.log('✅ Socket connected with ID:', socket.id);
+});
+
+socket.on('connect_error', (error) => {
+  console.error('❌ Socket connection error:', {
+    message: error.message,
+    description: error.description,
+    type: error.type
   });
 });
 
 socket.on('disconnect', (reason) => {
-  console.log('❌ Socket disconnected:', {
-    reason,
-    wasConnected: socket.connected,
-    attempts: socket.io.engine.reconnectionAttempts
-  });
-});
-
-socket.on('connect_error', (error) => {
-  console.error('🚫 Socket connection error:', {
-    message: error.message,
-    type: error.type,
-    description: error.description
-  });
+  console.log('🔌 Socket disconnected:', reason);
 });
 
 // Debug all incoming events
 socket.onAny((eventName, ...args) => {
-  console.log('📨 Socket event received:', {
+  console.log('🎯 Socket Event:', {
     event: eventName,
-    data: args,
-    time: new Date().toISOString(),
-    socketId: socket.id,
-    connected: socket.connected
+    args: args
   });
 });
 
-// Debug all outgoing events
-const emit = socket.emit;
-socket.emit = function(...args) {
-  console.log('📤 Socket event sent:', {
-    event: args[0],
-    data: args.slice(1),
-    time: new Date().toISOString(),
-    socketId: socket.id
-  });
-  emit.apply(this, args);
-};
-
-export default socket;
+export { socket };

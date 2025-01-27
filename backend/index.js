@@ -25,20 +25,39 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Configure Socket.IO with proper CORS
+// Socket.IO setup
 const io = new Server(server, {
-  path: '/socket.io',
   cors: {
-    origin: [
-      "https://cc1.automate8.com",  // Frontend
-      "http://localhost:3000"       // Local development
-    ],
+    origin: ["https://cc1.automate8.com", "http://localhost:3000"],
     methods: ["GET", "POST"],
-    allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true
   },
-  transports: ['polling', 'websocket'],
-  allowEIO3: true
+  path: '/socket.io',
+  transports: ['websocket', 'polling']
+});
+
+// Socket connection handling
+io.on('connection', (socket) => {
+  console.log('🔌 New socket connection:', {
+    id: socket.id,
+    transport: socket.conn.transport.name,
+    headers: socket.handshake.headers,
+    time: new Date().toISOString()
+  });
+
+  socket.on('disconnect', (reason) => {
+    console.log('🔌 Socket disconnected:', {
+      id: socket.id,
+      reason,
+      time: new Date().toISOString()
+    });
+  });
+
+  socket.on('register', (phoneNumber) => {
+    users.set(phoneNumber, socket.id);
+    console.log(`User ${phoneNumber} registered with socket ${socket.id}`);
+    socket.emit('registered', { status: 'success', phoneNumber });
+  });
 });
 
 // Twilio client setup
@@ -49,27 +68,6 @@ const client = twilio(
 
 // Track connected users
 const users = new Map();
-
-// Socket.io connection
-io.on('connection', (socket) => {
-  console.log('User connected:', socket.id);
-
-  socket.on('register', (phoneNumber) => {
-    users.set(phoneNumber, socket.id);
-    console.log(`User ${phoneNumber} registered with socket ${socket.id}`);
-    socket.emit('registered', { status: 'success', phoneNumber });
-  });
-
-  socket.on('disconnect', () => {
-    for (const [phone, sid] of users.entries()) {
-      if (sid === socket.id) {
-        users.delete(phone);
-        console.log(`User ${phone} disconnected`);
-        break;
-      }
-    }
-  });
-});
 
 // Send SMS endpoint
 app.post('/send-sms', async (req, res) => {
