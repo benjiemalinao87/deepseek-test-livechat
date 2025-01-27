@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ChakraProvider, Box, useColorMode, VStack, IconButton, useToast, Image, HStack } from '@chakra-ui/react';
+import { ChakraProvider, Box, useColorMode, VStack, IconButton, useToast, Image, HStack, Button } from '@chakra-ui/react';
 import { UserList } from './components/chat/UserList';
 import { MessageList } from './components/chat/MessageList';
 import { MessageInput } from './components/chat/MessageInput';
@@ -8,6 +8,7 @@ import { Plus, Moon, Sun, MessageCircle } from 'lucide-react';
 import { socket } from './socket';
 import axios from 'axios';
 import { DockWindow } from './components/dock/DockWindow';
+import { TestChat } from './components/test/TestChat';
 
 function App() {
   const { colorMode, toggleColorMode } = useColorMode();
@@ -19,6 +20,7 @@ function App() {
   const [connected, setConnected] = useState(false);
   const [users, setUsers] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showTestChat, setShowTestChat] = useState(false);
   const toast = useToast();
 
   const isDark = colorMode === 'dark';
@@ -284,6 +286,25 @@ function App() {
             />
           )}
         </Box>
+        
+        {/* Test Chat Toggle */}
+        <Box position="fixed" right="4" top="4">
+          <Button onClick={toggleColorMode} size="sm">
+            {isDark ? <Sun size={16} /> : <Moon size={16} />}
+          </Button>
+        </Box>
+        
+        <VStack spacing={4} p={4}>
+          <Button onClick={() => setShowTestChat(!showTestChat)}>
+            {showTestChat ? 'Show Dock UI' : 'Show Test Chat'}
+          </Button>
+          
+          {showTestChat ? (
+            <TestChat />
+          ) : (
+            <DockWindow />
+          )}
+        </VStack>
       </Box>
     </ChakraProvider>
   );
