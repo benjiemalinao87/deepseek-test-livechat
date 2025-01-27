@@ -31,18 +31,29 @@ function App() {
       socket.on(event, (rawData) => {
         console.log(`📥 Raw socket event:`, rawData);
         try {
-          // Extract message from data array if present
-          const data = Array.isArray(rawData.data) ? rawData.data[0] : rawData;
-          console.log('📦 Processing message:', data);
+          // Extract message data
+          let messageData;
           
-          // Check if message is in the expected format
-          const messageData = {
-            from: data.from || data.From,
-            to: data.to || data.To,
-            message: data.message || data.Body || data.text || '',
-            timestamp: data.timestamp || data.Timestamp || new Date().toISOString(),
-            direction: data.direction || 'inbound'
-          };
+          // Handle message format
+          if (rawData.event === 'new_message') {
+            messageData = {
+              from: rawData.from,
+              to: rawData.to,
+              message: rawData.message,
+              timestamp: rawData.timestamp || new Date().toISOString(),
+              direction: 'inbound'
+            };
+          } else {
+            // Extract message from data array if present
+            const data = Array.isArray(rawData.data) ? rawData.data[0] : rawData;
+            messageData = {
+              from: data.from || data.From,
+              to: data.to || data.To,
+              message: data.message || data.Body || data.text || '',
+              timestamp: data.timestamp || data.Timestamp || new Date().toISOString(),
+              direction: data.direction || 'inbound'
+            };
+          }
           
           // Validate message
           if (!messageData.from || !messageData.message) {
