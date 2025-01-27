@@ -34,33 +34,36 @@ function App() {
       setConnected(false);
     });
 
-    // Listen for inbound SMS events
-    socket.on('inbound_sms', (message) => {
-      console.log('New inbound SMS received:', message);
-      const formattedMessage = {
-        from: message.From || message.from || message.sender,
-        to: message.To || message.to || message.recipient || 'me',
-        message: message.Body || message.body || message.text || message.message || '',
-        timestamp: message.timestamp || new Date().toISOString(),
-        direction: 'inbound'
-      };
-      console.log('Formatted inbound message:', formattedMessage);
-      setMessages(prev => [...prev, formattedMessage]);
-      
-      // Show notification for new message
-      toast({
-        title: 'New Message',
-        description: `From: ${formattedMessage.from}`,
-        status: 'info',
-        duration: 5000,
-        isClosable: true,
+    // Listen for all possible inbound SMS events
+    const inboundEvents = ['inbound_sms', 'sms_received', 'message', 'inbound_message'];
+    inboundEvents.forEach(event => {
+      socket.on(event, (message) => {
+        console.log(`New message received on ${event}:`, message);
+        const formattedMessage = {
+          from: message.From || message.from || message.sender,
+          to: message.To || message.to || message.recipient || 'me',
+          message: message.Body || message.body || message.text || message.message || '',
+          timestamp: message.timestamp || new Date().toISOString(),
+          direction: 'inbound'
+        };
+        console.log('Formatted inbound message:', formattedMessage);
+        setMessages(prev => [...prev, formattedMessage]);
+        
+        // Show notification for new message
+        toast({
+          title: 'New Message',
+          description: `From: ${formattedMessage.from}`,
+          status: 'info',
+          duration: 5000,
+          isClosable: true,
+        });
       });
     });
 
     return () => {
       socket.off('connect');
       socket.off('disconnect');
-      socket.off('inbound_sms');
+      inboundEvents.forEach(event => socket.off(event));
     };
   }, [toast]);
 
