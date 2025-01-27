@@ -31,7 +31,6 @@ export function MainLayout() {
   return (
     <Box
       minH="100vh"
-      bg={bgColor}
       backgroundImage="url('https://images.unsplash.com/photo-1506744038136-46273834b3fb?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80')"
       backgroundSize="cover"
       backgroundPosition="center"
@@ -43,7 +42,8 @@ export function MainLayout() {
         right: 0,
         bottom: 0,
         left: 0,
-        background: 'rgba(0, 0, 0, 0.3)',
+        background: useColorModeValue('rgba(255, 255, 255, 0.7)', 'rgba(0, 0, 0, 0.5)'),
+        backdropFilter: 'blur(1px)',
         zIndex: 0
       }}
     >
