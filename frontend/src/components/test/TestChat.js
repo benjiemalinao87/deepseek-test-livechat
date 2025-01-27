@@ -9,6 +9,7 @@ import {
   Container,
   Heading,
   Divider,
+  Flex,
 } from '@chakra-ui/react';
 import { socket } from '../../socket';
 
@@ -159,25 +160,43 @@ export const TestChat = () => {
           borderRadius="md" 
           overflowY="auto"
           p={4}
+          display="flex"
+          flexDirection="column"
+          gap={2}
         >
-          {messages.map((msg, index) => (
-            <Box
-              key={index}
-              bg={msg.direction === 'outbound' ? 'blue.100' : 'gray.100'}
-              p={2}
-              my={1}
-              borderRadius="md"
-              alignSelf={msg.direction === 'outbound' ? 'flex-end' : 'flex-start'}
-            >
-              <Text fontSize="sm" color="gray.500">
-                {msg.direction === 'outbound' ? 'You' : msg.from}
-              </Text>
-              <Text>{msg.message}</Text>
-              <Text fontSize="xs" color="gray.500">
-                {new Date(msg.timestamp).toLocaleTimeString()}
-              </Text>
-            </Box>
-          ))}
+          {messages.map((msg, index) => {
+            const isOutbound = msg.direction === 'outbound';
+            return (
+              <Flex
+                key={index}
+                w="100%"
+                justify={isOutbound ? 'flex-end' : 'flex-start'}
+              >
+                <Box
+                  maxW="80%"
+                  bg={isOutbound ? 'blue.500' : 'gray.100'}
+                  color={isOutbound ? 'white' : 'black'}
+                  p={3}
+                  borderRadius="lg"
+                  borderTopRightRadius={isOutbound ? '4px' : 'lg'}
+                  borderTopLeftRadius={!isOutbound ? '4px' : 'lg'}
+                >
+                  <Text fontSize="xs" color={isOutbound ? 'blue.100' : 'gray.500'} mb={1}>
+                    {isOutbound ? 'You' : msg.from}
+                  </Text>
+                  <Text>{msg.message}</Text>
+                  <Text 
+                    fontSize="xs" 
+                    color={isOutbound ? 'blue.100' : 'gray.500'}
+                    textAlign="right"
+                    mt={1}
+                  >
+                    {new Date(msg.timestamp).toLocaleTimeString()}
+                  </Text>
+                </Box>
+              </Flex>
+            );
+          })}
         </Box>
 
         <Box>
