@@ -70,61 +70,6 @@ const client = twilio(
 // Track connected users
 const users = new Map();
 
-// Send SMS endpoint
-app.post('/send-sms', async (req, res) => {
-  const { to, message } = req.body;
-  
-  try {
-    const result = await client.messages.create({
-      body: message,
-      to: to,
-      from: process.env.TWILIO_PHONE
-    });
-
-    console.log('SMS sent successfully:', {
-      sid: result.sid,
-      status: result.status,
-      to: result.to
-    });
-
-    // Broadcast the message to all clients
-    io.emit('new_message', {
-      message,
-      from: process.env.TWILIO_PHONE,
-      to: to,
-      timestamp: new Date(),
-      direction: 'outbound',
-      status: result.status,
-      messageSid: result.sid
-    });
-
-    res.json({ success: true, messageSid: result.sid });
-  } catch (error) {
-    console.error('Error sending SMS:', {
-      error: error.message,
-      code: error.code,
-      moreInfo: error.moreInfo
-    });
-    res.status(500).json({ 
-      success: false, 
-      error: error.message 
-    });
-  }
-});
-
-// Message status webhook
-app.post('/message-status', (req, res) => {
-  const messageSid = req.body.MessageSid;
-  const messageStatus = req.body.MessageStatus;
-
-  console.log('Message status update:', {
-    messageSid,
-    status: messageStatus
-  });
-
-  res.sendStatus(200);
-});
-
 // Twilio webhook for incoming messages
 app.post('/twilio', express.urlencoded({ extended: true }), (req, res) => {
   try {
@@ -151,14 +96,32 @@ app.post('/twilio', express.urlencoded({ extended: true }), (req, res) => {
       sockets: connectedSockets
     });
 
-    // Broadcast with acknowledgment
-    io.emit('new_message', messageData, (error) => {
-      if (error) {
-        console.error('❌ Broadcast error:', error);
-      } else {
-        console.log('✅ Message broadcast successful');
-      }
+    // Find the socket ID for the recipient
+    const recipientSocketId = users.get(messageData.to);
+    console.log('🎯 Found recipient socket:', {
+      phoneNumber: messageData.to,
+      socketId: recipientSocketId
     });
+
+    // Broadcast to specific user if found, otherwise broadcast to all
+    if (recipientSocketId) {
+      io.to(recipientSocketId).emit('new_message', messageData, (error) => {
+        if (error) {
+          console.error('❌ Direct message error:', error);
+        } else {
+          console.log('✅ Direct message sent to:', recipientSocketId);
+        }
+      });
+    } else {
+      // Broadcast to all as fallback
+      io.emit('new_message', messageData, (error) => {
+        if (error) {
+          console.error('❌ Broadcast error:', error);
+        } else {
+          console.log('✅ Message broadcast successful');
+        }
+      });
+    }
 
     // Send TwiML response
     const twimlResponse = '<?xml version="1.0" encoding="UTF-8"?><Response></Response>';
@@ -169,6 +132,77 @@ app.post('/twilio', express.urlencoded({ extended: true }), (req, res) => {
     console.error('❌ Webhook Error:', error);
     res.status(500).send('<?xml version="1.0" encoding="UTF-8"?><Response></Response>');
   }
+});
+
+// Send SMS endpoint
+app.post('/send-sms', async (req, res) => {
+  try {
+    const { to, message } = req.body;
+    
+    if (!to || !message) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Phone number and message are required' 
+      });
+    }
+
+    console.log('📤 Sending SMS:', { to, message });
+
+    const result = await client.messages.create({
+      body: message,
+      to: to,
+      from: process.env.TWILIO_PHONE
+    });
+
+    console.log('✅ SMS sent:', {
+      sid: result.sid,
+      status: result.status,
+      to: to
+    });
+
+    // Prepare outbound message data
+    const messageData = {
+      from: process.env.TWILIO_PHONE,
+      to: to,
+      message: message,
+      timestamp: new Date().toISOString(),
+      direction: 'outbound',
+      messageSid: result.sid,
+      status: result.status
+    };
+
+    // Find the socket ID for the sender
+    const senderSocketId = Array.from(io.sockets.sockets.keys())[0];
+    if (senderSocketId) {
+      io.to(senderSocketId).emit('new_message', messageData);
+    }
+
+    res.json({ 
+      success: true, 
+      messageSid: result.sid,
+      status: result.status 
+    });
+
+  } catch (error) {
+    console.error('❌ SMS Error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+});
+
+// Message status webhook
+app.post('/message-status', (req, res) => {
+  const messageSid = req.body.MessageSid;
+  const messageStatus = req.body.MessageStatus;
+
+  console.log('Message status update:', {
+    messageSid,
+    status: messageStatus
+  });
+
+  res.sendStatus(200);
 });
 
 // Test endpoint
