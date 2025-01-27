@@ -25,7 +25,7 @@ import {
 } from '@chakra-ui/react';
 import { socket } from '../../socket';
 import { SearchIcon, ChevronDownIcon, CloseIcon } from '@chakra-ui/icons';
-import { BsEmojiSmile, BsPaperclip, BsMic, BsCalendarEvent, BsThreeDots } from 'react-icons/bs';
+import { BsEmojiSmile, BsPaperclip, BsMic, BsCalendarEvent } from 'react-icons/bs';
 
 export const TestChat = () => {
   const [phone, setPhone] = useState('');
