@@ -35,51 +35,56 @@ function App() {
     });
 
     // Listen for all possible inbound SMS events
-    const inboundEvents = ['inbound_sms', 'sms_received', 'message', 'inbound_message', 'twilio_webhook', 'sms'];
+    const inboundEvents = ['new_message'];
     
-    // Debug: Log which events we're listening to
     console.log('🎧 Setting up listeners for events:', inboundEvents);
 
     inboundEvents.forEach(event => {
-      socket.on(event, (message) => {
-        console.log(`📥 New message on ${event}:`, message);
+      socket.on(event, (data) => {
+        console.log(`📥 New message on ${event}:`, data);
         try {
-          // Try to parse if message is a string
-          const messageData = typeof message === 'string' ? JSON.parse(message) : message;
-          console.log('📦 Parsed message data:', messageData);
+          // Handle array of messages
+          const messages = Array.isArray(data) ? data : [data];
           
-          const formattedMessage = {
-            from: messageData.From || messageData.from || messageData.sender,
-            to: messageData.To || messageData.to || messageData.recipient || 'me',
-            message: messageData.Body || messageData.body || messageData.text || messageData.message || '',
-            timestamp: messageData.timestamp || new Date().toISOString(),
-            direction: 'inbound'
-          };
-          
-          // Validate message
-          if (!formattedMessage.from || !formattedMessage.message) {
-            console.warn('⚠️ Invalid message format:', messageData);
-            return;
-          }
-          
-          console.log('✨ Adding formatted message:', formattedMessage);
-          setMessages(prev => {
-            const newMessages = [...prev, formattedMessage];
-            console.log('📚 Updated messages:', newMessages);
-            return newMessages;
-          });
-          
-          toast({
-            title: 'New Message',
-            description: `From: ${formattedMessage.from}`,
-            status: 'info',
-            duration: 5000,
-            isClosable: true,
+          messages.forEach(messageData => {
+            console.log('📦 Processing message:', messageData);
+            
+            // Try to parse if message is a string
+            const parsedData = typeof messageData === 'string' ? JSON.parse(messageData) : messageData;
+            
+            const formattedMessage = {
+              from: parsedData.From || parsedData.from || parsedData.sender || parsedData.phoneNumber,
+              to: parsedData.To || parsedData.to || parsedData.recipient || 'me',
+              message: parsedData.Body || parsedData.body || parsedData.text || parsedData.message || parsedData.content,
+              timestamp: parsedData.timestamp || parsedData.time || new Date().toISOString(),
+              direction: 'inbound'
+            };
+            
+            // Validate message
+            if (!formattedMessage.from || !formattedMessage.message) {
+              console.warn('⚠️ Invalid message format:', parsedData);
+              return;
+            }
+            
+            console.log('✨ Adding formatted message:', formattedMessage);
+            setMessages(prev => {
+              const newMessages = [...prev, formattedMessage];
+              console.log('📚 Updated messages:', newMessages);
+              return newMessages;
+            });
+            
+            toast({
+              title: 'New Message',
+              description: `From: ${formattedMessage.from}`,
+              status: 'info',
+              duration: 5000,
+              isClosable: true,
+            });
           });
         } catch (error) {
           console.error('❌ Error processing message:', {
             error: error.message,
-            originalMessage: message
+            originalData: data
           });
         }
       });
