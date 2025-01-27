@@ -9,21 +9,25 @@ export const DockWindow = ({ title, onClose, children }) => {
   const bgColor = useColorModeValue('white', 'gray.800');
   const borderColor = useColorModeValue('gray.200', 'gray.700');
   const headerBg = useColorModeValue('gray.100', 'gray.700');
-  const scrollbarThumbColor = useColorModeValue('gray.300', 'gray.600');
+  const scrollbarThumbColor = useColorModeValue('gray.400', 'gray.600');
 
   if (isMinimized) return null;
 
   return (
     <Draggable
       handle=".window-handle"
-      bounds="parent"
-      defaultPosition={{x: window.innerWidth/4, y: window.innerHeight/4}}
+      defaultPosition={{x: window.innerWidth/4, y: 50}}
+      bounds={{
+        left: 0,
+        top: 0,
+        right: window.innerWidth - 820, // 800px window width + 20px margin
+        bottom: window.innerHeight - 620 // 600px window height + 20px margin
+      }}
     >
       <Box
         position="absolute"
-        w="80%"
-        maxW="1000px"
-        h="80vh"
+        width="800px"
+        height="600px"
         bg={bgColor}
         borderRadius="lg"
         boxShadow="xl"
