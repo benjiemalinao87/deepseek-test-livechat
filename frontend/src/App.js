@@ -191,7 +191,8 @@ function App() {
           <ContactForm
             isOpen={showAddContact}
             onClose={() => setShowAddContact(false)}
-            onSubmit={handleAddContact}
+            onAddContact={handleAddContact}
+            isDark={isDark}
           />
         )}
       </Box>
