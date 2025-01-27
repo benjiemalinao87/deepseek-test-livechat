@@ -1,16 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { ChakraProvider, Box, useColorMode, VStack, IconButton, useToast, Image, HStack, Flex, AnimatePresence } from '@chakra-ui/react';
+import { ChakraProvider, Box, useColorMode, VStack, IconButton, useToast, Image, HStack } from '@chakra-ui/react';
 import { UserList } from './components/chat/UserList';
 import { MessageList } from './components/chat/MessageList';
 import { MessageInput } from './components/chat/MessageInput';
 import { ContactForm } from './components/chat/ContactForm';
-import { Plus, Moon, Sun, MessageCircle, ChatIcon, SettingsIcon, InfoIcon } from 'lucide-react';
+import { Plus, Moon, Sun, MessageCircle } from 'lucide-react';
 import { socket } from './socket';
 import axios from 'axios';
 import { DockWindow } from './components/dock/DockWindow';
-import { ChatWindow } from './components/windows/ChatWindow';
-import { SettingsWindow } from './components/windows/SettingsWindow';
-import { AboutWindow } from './components/windows/AboutWindow';
 
 function App() {
   const { colorMode, toggleColorMode } = useColorMode();
@@ -22,70 +19,75 @@ function App() {
   const [connected, setConnected] = useState(false);
   const [users, setUsers] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedWindow, setSelectedWindow] = useState('chat');
   const toast = useToast();
 
   const isDark = colorMode === 'dark';
 
   useEffect(() => {
-    console.log('🔧 Environment:', {
-      apiUrl: process.env.REACT_APP_API_URL || 'https://cc.automate8.com',
-      nodeEnv: process.env.NODE_ENV
-    });
+    const inboundEvents = ['new_message'];
+    console.log('🎧 Setting up listeners for events:', inboundEvents);
 
-    const socket = socket;
-    console.log('🔌 Socket connection initialized');
+    inboundEvents.forEach(event => {
+      socket.on(event, (rawData) => {
+        console.log(`📥 Raw socket event:`, rawData);
+        try {
+          // Extract message data
+          let messageData;
+          
+          // Handle different message formats
+          if (rawData && typeof rawData === 'object') {
+            console.log('📦 Processing message object:', rawData);
+            
+            // Extract the message content
+            const messageContent = rawData.Body || rawData.message || rawData.text || '';
+            const fromNumber = rawData.From || rawData.from || '';
+            const toNumber = rawData.To || rawData.to || '';
+            
+            messageData = {
+              from: fromNumber,
+              to: toNumber,
+              message: messageContent,
+              timestamp: new Date().toISOString(),
+              direction: 'inbound'
+            };
+            
+            console.log('✨ Formatted message:', messageData);
+          } else {
+            console.warn('⚠️ Unexpected message format:', rawData);
+            return;
+          }
+          
+          // Validate message
+          if (!messageData.from || !messageData.message) {
+            console.warn('⚠️ Invalid message:', messageData);
+            return;
+          }
 
-    // Debug socket connection
-    socket.on('connect', () => {
-      console.log('✅ Socket connected with ID:', socket.id);
-      setConnected(true);
-    });
-
-    socket.on('disconnect', (reason) => {
-      console.log('❌ Socket disconnected:', reason);
-      setConnected(false);
-    });
-
-    socket.on('connect_error', (error) => {
-      console.error('🚨 Socket connection error:', {
-        message: error.message,
-        type: error.type,
-        description: error.description
-      });
-      setConnected(false);
-    });
-
-    // Handle inbound messages
-    socket.on('new_message', (data) => {
-      console.log('📥 Received inbound message:', data);
-      const newMessage = {
-        id: data.messageSid || Date.now(),
-        from: data.from,
-        message: data.message || data.Body,
-        timestamp: new Date(),
-        direction: data.direction || 'inbound'
-      };
-      console.log('💬 Processed message:', newMessage);
-      setMessages(prev => [...prev, newMessage]);
-    });
-
-    // Debug all socket events
-    socket.onAny((eventName, ...args) => {
-      console.log('🎯 Socket Event:', {
-        event: eventName,
-        args: args
+          console.log('✨ Adding message to UI:', messageData);
+          setMessages(prev => [...prev, messageData]);
+          
+          // Show notification for inbound messages
+          toast({
+            title: 'New Message',
+            description: `From: ${messageData.from}\n${messageData.message}`,
+            status: 'info',
+            duration: 3000,
+            isClosable: true,
+          });
+        } catch (error) {
+          console.error('❌ Error handling message:', {
+            error: error.message,
+            rawData
+          });
+        }
       });
     });
 
     return () => {
-      console.log('🔌 Cleaning up socket connection');
-      socket.off('new_message');
-      socket.off('connect');
-      socket.off('disconnect');
-      socket.off('connect_error');
+      console.log('🧹 Cleaning up socket listeners');
+      inboundEvents.forEach(event => socket.off(event));
     };
-  }, []);
+  }, [toast, setMessages]);
 
   useEffect(() => {
     socket.on('connect', () => {
@@ -106,12 +108,13 @@ function App() {
   }, []);
 
   const handleSendMessage = async () => {
+    if (!selectedUser || !message.trim()) return;
+
     try {
-      console.log('📤 Sending message:', message);
       const response = await fetch('https://cc.automate8.com/send-sms', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           to: selectedUser,
@@ -119,26 +122,40 @@ function App() {
         })
       });
 
-      const result = await response.json();
-      console.log('📨 Send message response:', result);
+      const responseData = await response.json();
+      console.log('SMS API Response:', responseData);
 
-      if (result.success) {
-        const newMessage = {
-          id: result.messageSid || Date.now(),
-          from: 'You',
-          message: message.trim(),
-          timestamp: new Date(),
-          direction: 'outbound'
-        };
-        console.log('💬 Adding outbound message:', newMessage);
-        setMessages(prev => [...prev, newMessage]);
-      } else {
-        console.error('❌ Failed to send message:', result.error);
-        throw new Error(result.error);
+      if (!response.ok) {
+        throw new Error(responseData.message || 'Failed to send message');
       }
+
+      const sentMessage = {
+        from: 'me',
+        to: selectedUser,
+        message: message.trim(),
+        timestamp: new Date().toISOString(),
+        direction: 'outbound'
+      };
+      console.log('Sent message:', sentMessage);
+      setMessages(prev => [...prev, sentMessage]);
+      
+      setMessage('');
+      toast({
+        title: 'Message Sent',
+        description: 'SMS sent successfully',
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      });
     } catch (error) {
-      console.error('🚨 Error sending message:', error);
-      throw error;
+      console.error('Error sending message:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to send message',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
     }
   };
 
@@ -159,81 +176,106 @@ function App() {
   );
 
   return (
-    <ChakraProvider theme={theme}>
-      <Box minH="100vh" bg={useColorModeValue('gray.100', 'gray.900')}>
-        <Flex direction="column" h="100vh">
-          <Header colorMode={colorMode} toggleColorMode={toggleColorMode} />
-          
+    <ChakraProvider>
+      <Box 
+        minH="100vh" 
+        position="relative"
+        bgImage="url('https://images.unsplash.com/photo-1506744038136-46273834b3fb?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80')"
+        bgSize="cover"
+        bgPosition="center"
+        bgRepeat="no-repeat"
+      >
+        {/* Add a semi-transparent overlay */}
+        <Box
+          position="absolute"
+          top="0"
+          left="0"
+          right="0"
+          bottom="0"
+          bg={isDark ? 'rgba(26, 32, 44, 0.3)' : 'transparent'}
+          zIndex="0"
+        />
+        
+        {/* Content */}
+        <Box position="relative" zIndex="1">
           {/* Dock */}
-          <Flex 
-            position="fixed" 
-            bottom="20px" 
-            left="50%" 
-            transform="translateX(-50%)" 
-            bg={useColorModeValue('white', 'gray.800')} 
-            borderRadius="full" 
-            boxShadow="xl" 
+          <Box
+            position="fixed"
+            bottom="20px"
+            left="50%"
+            transform="translateX(-50%)"
+            bg={isDark ? 'gray.700' : 'white'}
             p={2}
+            borderRadius="full"
+            boxShadow="lg"
             zIndex={1000}
           >
-            <IconButton
-              icon={<ChatIcon />}
-              aria-label="Chat"
-              colorScheme="blue"
-              variant="ghost"
-              size="lg"
-              onClick={() => setSelectedWindow('chat')}
-              isActive={selectedWindow === 'chat'}
-              mx={1}
-            />
-            <IconButton
-              icon={<SettingsIcon />}
-              aria-label="Settings"
-              colorScheme="blue"
-              variant="ghost"
-              size="lg"
-              onClick={() => setSelectedWindow('settings')}
-              isActive={selectedWindow === 'settings'}
-              mx={1}
-            />
-            <IconButton
-              icon={<InfoIcon />}
-              aria-label="About"
-              colorScheme="blue"
-              variant="ghost"
-              size="lg"
-              onClick={() => setSelectedWindow('about')}
-              isActive={selectedWindow === 'about'}
-              mx={1}
-            />
-          </Flex>
+            <HStack spacing={4}>
+              <IconButton
+                icon={<MessageCircle />}
+                colorScheme="blue"
+                variant="ghost"
+                isRound
+                onClick={() => setShowChat(true)}
+              />
+              <IconButton
+                icon={isDark ? <Sun /> : <Moon />}
+                onClick={toggleColorMode}
+                variant="ghost"
+                isRound
+              />
+            </HStack>
+          </Box>
 
-          {/* Windows Container */}
-          <Flex flex="1" position="relative" overflow="hidden">
-            <AnimatePresence>
-              {selectedWindow === 'chat' && (
-                <ChatWindow
-                  key="chat"
-                  isConnected={connected}
-                  messages={messages}
-                  selectedUser={selectedUser}
-                  onUserSelect={setSelectedUser}
-                  onSendMessage={handleSendMessage}
-                />
-              )}
-              {selectedWindow === 'settings' && (
-                <SettingsWindow
-                  key="settings"
-                />
-              )}
-              {selectedWindow === 'about' && (
-                <AboutWindow
-                  key="about"
-                />
-              )}
-            </AnimatePresence>
-          </Flex>
-        </Flex>
+          {/* Chat Window */}
+          {showChat && (
+            <DockWindow title="LiveChat" onClose={() => setShowChat(false)}>
+              <Box h="100%" display="flex">
+                {/* Left Panel */}
+                <Box w="300px" borderRight="1px solid" borderColor={isDark ? 'gray.700' : 'gray.200'}>
+                  <VStack h="100%" spacing={0}>
+                    <Box p={4} w="100%">
+                      <IconButton
+                        icon={<Plus />}
+                        onClick={() => setShowAddContact(true)}
+                        size="sm"
+                        colorScheme="blue"
+                        variant="ghost"
+                        isRound
+                      />
+                    </Box>
+                    <UserList
+                      users={users}
+                      selectedUser={selectedUser}
+                      onSelectUser={setSelectedUser}
+                      messages={messages}
+                    />
+                  </VStack>
+                </Box>
+
+                {/* Right Panel */}
+                <Box flex="1" display="flex" flexDirection="column">
+                  <MessageList messages={filteredMessages} />
+                  <MessageInput
+                    message={message}
+                    onChange={setMessage}
+                    onSend={handleSendMessage}
+                  />
+                </Box>
+              </Box>
+            </DockWindow>
+          )}
+
+          {/* Add Contact Modal */}
+          {showAddContact && (
+            <ContactForm
+              isOpen={showAddContact}
+              onClose={() => setShowAddContact(false)}
+              onAddContact={handleAddContact}
+              isDark={isDark}
+            />
+          )}
+        </Box>
       </Box>
     </ChakraProvider>
   );
