@@ -25,31 +25,45 @@ function App() {
 
   const isDark = colorMode === 'dark';
 
-  // Register phone number when user is selected
+  // Register phone number when user is selected or on reconnection
   useEffect(() => {
-    if (selectedUser?.phone) {
-      // Register the Twilio number to receive messages
-      const twilioNumber = '+13256665486';
-      console.log('📱 Registering numbers:', {
-        twilio: twilioNumber,
-        user: selectedUser.phone
-      });
-      
-      // Register both numbers to receive messages
-      socket.emit('register', twilioNumber);
-      socket.emit('register', selectedUser.phone);
-
-      socket.on('registered', (data) => {
-        console.log('✅ Number registered:', data);
-        toast({
-          title: 'Chat Ready',
-          description: `Connected to ${selectedUser.name}`,
-          status: 'success',
-          duration: 3000,
+    const registerPhones = () => {
+      if (selectedUser?.phone) {
+        const twilioNumber = '+13256665486';
+        console.log('📱 Registering numbers:', {
+          twilio: twilioNumber,
+          user: selectedUser.phone
         });
+        
+        // Register both numbers to receive messages
+        socket.emit('register', twilioNumber);
+        socket.emit('register', selectedUser.phone);
+      }
+    };
+
+    // Initial registration
+    registerPhones();
+
+    // Re-register on reconnection
+    socket.on('connect', () => {
+      console.log('🔌 Socket reconnected, re-registering phones');
+      registerPhones();
+    });
+
+    socket.on('registered', (data) => {
+      console.log('✅ Number registered:', data);
+      toast({
+        title: 'Chat Ready',
+        description: `Connected to ${selectedUser.name}`,
+        status: 'success',
+        duration: 3000,
       });
-    }
-    return () => socket.off('registered');
+    });
+
+    return () => {
+      socket.off('registered');
+      socket.off('connect');
+    };
   }, [selectedUser, toast]);
 
   // Handle messages
@@ -100,13 +114,6 @@ function App() {
     socket.on('connect', () => {
       console.log('✅ Connected to socket');
       setConnected(true);
-
-      // Re-register numbers if user is selected
-      if (selectedUser?.phone) {
-        const twilioNumber = '+13256665486';
-        socket.emit('register', twilioNumber);
-        socket.emit('register', selectedUser.phone);
-      }
     });
 
     socket.on('disconnect', () => {
@@ -123,7 +130,7 @@ function App() {
       socket.off('connect');
       socket.off('disconnect');
     };
-  }, [selectedUser, toast]);
+  }, [toast]);
 
   const handleSendMessage = async () => {
     if (!selectedUser || !message.trim()) return;

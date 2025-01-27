@@ -34,6 +34,10 @@ const io = new Server(server, {
   pingInterval: 25000
 });
 
+// Store both socket->phone and phone->socket mappings
+const socketPhones = new Map(); // socket.id -> Set of phone numbers
+const phoneSocket = new Map();  // phone number -> socket.id
+
 // Socket connection handling with debug logs
 io.on('connection', (socket) => {
   console.log('🔌 New socket connection:', {
@@ -50,15 +54,22 @@ io.on('connection', (socket) => {
 
     console.log('📱 Registering phone:', { phoneNumber, socketId: socket.id });
     
-    // Store both socket->phone and phone->socket mappings
-    socket.phoneNumber = phoneNumber;
-    users.set(phoneNumber, socket.id);
+    // Initialize set for this socket if it doesn't exist
+    if (!socketPhones.has(socket.id)) {
+      socketPhones.set(socket.id, new Set());
+    }
+    
+    // Add phone number to socket's set
+    socketPhones.get(socket.id).add(phoneNumber);
+    
+    // Update phone -> socket mapping
+    phoneSocket.set(phoneNumber, socket.id);
     
     console.log('✅ Phone registered:', { 
       phoneNumber, 
       socketId: socket.id,
-      totalUsers: users.size,
-      registeredPhones: Array.from(users.keys())
+      totalPhones: phoneSocket.size,
+      registeredPhones: Array.from(phoneSocket.keys())
     });
     
     socket.emit('registered', { 
@@ -71,19 +82,28 @@ io.on('connection', (socket) => {
   socket.on('disconnect', (reason) => {
     console.log('🔌 Socket disconnected:', {
       id: socket.id,
-      phone: socket.phoneNumber,
       reason,
       time: new Date().toISOString()
     });
 
-    // Clean up user registration
-    if (socket.phoneNumber) {
-      users.delete(socket.phoneNumber);
-      console.log('🗑️ Removed registration:', {
-        phone: socket.phoneNumber,
-        remainingUsers: Array.from(users.keys())
+    // Clean up registrations for this socket
+    if (socketPhones.has(socket.id)) {
+      const phones = socketPhones.get(socket.id);
+      phones.forEach(phone => {
+        phoneSocket.delete(phone);
+        console.log('🗑️ Removed registration:', {
+          phone,
+          socketId: socket.id
+        });
       });
+      socketPhones.delete(socket.id);
     }
+
+    console.log('📊 Remaining registrations:', {
+      sockets: socketPhones.size,
+      phones: phoneSocket.size,
+      registeredPhones: Array.from(phoneSocket.keys())
+    });
   });
 });
 
@@ -92,9 +112,6 @@ const client = twilio(
   process.env.TWILIO_ACCOUNT_SID,
   process.env.TWILIO_AUTH_TOKEN
 );
-
-// Track connected users
-const users = new Map();
 
 // Twilio webhook for incoming messages
 app.post('/twilio', express.urlencoded({ extended: true }), (req, res) => {
@@ -114,35 +131,40 @@ app.post('/twilio', express.urlencoded({ extended: true }), (req, res) => {
       status: req.body.SmsStatus || 'received'
     };
 
-    // Log registered users
-    console.log('📊 Registered users:', {
-      users: Array.from(users.entries()),
+    // Log registered phones
+    console.log('📊 Registered phones:', {
+      phones: Array.from(phoneSocket.entries()),
       messageFrom: messageData.from,
       messageTo: messageData.to
     });
 
     // Find sockets for both sender and recipient
-    const senderSocket = users.get(messageData.from);
-    const recipientSocket = users.get(messageData.to);
+    const senderSocket = phoneSocket.get(messageData.from);
+    const recipientSocket = phoneSocket.get(messageData.to);
 
     console.log('🎯 Found sockets:', {
       sender: senderSocket,
       recipient: recipientSocket
     });
 
-    // Send to both sender and recipient sockets if found
+    let messageDelivered = false;
+
+    // Send to sender socket if found
     if (senderSocket) {
       io.to(senderSocket).emit('new_message', messageData);
       console.log('✅ Sent to sender:', senderSocket);
+      messageDelivered = true;
     }
 
-    if (recipientSocket) {
+    // Send to recipient socket if found and different from sender
+    if (recipientSocket && recipientSocket !== senderSocket) {
       io.to(recipientSocket).emit('new_message', messageData);
       console.log('✅ Sent to recipient:', recipientSocket);
+      messageDelivered = true;
     }
 
-    // If neither socket found, broadcast to all
-    if (!senderSocket && !recipientSocket) {
+    // If message wasn't delivered to any specific socket, broadcast
+    if (!messageDelivered) {
       console.log('⚠️ No specific sockets found, broadcasting');
       io.emit('new_message', messageData);
     }
