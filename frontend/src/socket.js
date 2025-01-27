@@ -1,6 +1,6 @@
 import { io } from 'socket.io-client';
 
-const SOCKET_URL = 'https://cc1.automate8.com';
+const SOCKET_URL = 'https://cc.automate8.com';
 
 export const socket = io(SOCKET_URL, {
   autoConnect: true,

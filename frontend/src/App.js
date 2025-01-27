@@ -34,17 +34,17 @@ function App() {
       setConnected(false);
     });
 
-    // Listen for SMS events
-    socket.on('sms', (message) => {
-      console.log('New SMS received:', message);
+    // Listen for inbound SMS events
+    socket.on('inbound_sms', (message) => {
+      console.log('New inbound SMS received:', message);
       const formattedMessage = {
-        from: message.from || message.sender,
-        to: message.to || message.recipient || 'me',
-        message: message.body || message.text || message.message || '',
+        from: message.From || message.from || message.sender,
+        to: message.To || message.to || message.recipient || 'me',
+        message: message.Body || message.body || message.text || message.message || '',
         timestamp: message.timestamp || new Date().toISOString(),
         direction: 'inbound'
       };
-      console.log('Formatted message:', formattedMessage);
+      console.log('Formatted inbound message:', formattedMessage);
       setMessages(prev => [...prev, formattedMessage]);
       
       // Show notification for new message
@@ -60,7 +60,7 @@ function App() {
     return () => {
       socket.off('connect');
       socket.off('disconnect');
-      socket.off('sms');
+      socket.off('inbound_sms');
     };
   }, [toast]);
 
@@ -68,15 +68,14 @@ function App() {
     if (!selectedUser || !message.trim()) return;
 
     try {
-      const response = await fetch('https://cc1.automate8.com/api/sms', {
+      const response = await fetch('https://cc.automate8.com/send-sms', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'application/json'
         },
         body: JSON.stringify({
-          recipient: selectedUser,
-          text: message.trim()
+          to: selectedUser,
+          message: message.trim()
         })
       });
 
