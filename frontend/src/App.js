@@ -79,6 +79,15 @@ function App() {
         throw new Error('Failed to send message');
       }
 
+      // Add sent message to messages state
+      const sentMessage = {
+        from: 'me',
+        to: selectedUser,
+        message: message.trim(),
+        timestamp: new Date().toISOString()
+      };
+      setMessages(prev => [...prev, sentMessage]);
+      
       setMessage('');
       toast({
         title: 'Message Sent',

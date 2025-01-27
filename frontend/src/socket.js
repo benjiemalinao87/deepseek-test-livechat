@@ -1,12 +1,15 @@
 import { io } from 'socket.io-client';
 
-const SOCKET_URL = 'https://cc1.automate8.com';
+const SOCKET_URL = 'wss://cc1.automate8.com';
 
 export const socket = io(SOCKET_URL, {
   autoConnect: true,
-  transports: ['websocket', 'polling'],
-  withCredentials: true,
-  path: '/socket.io'
+  transports: ['websocket'],
+  withCredentials: false,
+  path: '/socket.io',
+  reconnectionAttempts: 5,
+  reconnectionDelay: 1000,
+  timeout: 20000
 });
 
 // Debug socket connection
@@ -21,11 +24,6 @@ socket.on('connect_error', (error) => {
 
 socket.on('connect', () => {
   console.log('Socket connected successfully to:', SOCKET_URL);
-});
-
-// Listen for incoming messages
-socket.on('inbound_message', (message) => {
-  console.log('Received inbound message:', message);
 });
 
 export default socket;
