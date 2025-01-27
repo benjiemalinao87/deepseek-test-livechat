@@ -23,87 +23,41 @@ function App() {
 
   const isDark = colorMode === 'dark';
 
-  // Message handling effect
   useEffect(() => {
     const inboundEvents = ['new_message'];
     console.log('🎧 Setting up listeners for events:', inboundEvents);
-
-    // Message deduplication Set
-    const recentMessageIds = new Set();
 
     inboundEvents.forEach(event => {
       socket.on(event, (data) => {
         console.log(`📥 Raw inbound message:`, data);
         try {
-          // Handle array of messages
           const messages = Array.isArray(data) ? data : [data];
           
-          messages.forEach(messageData => {
-            console.log('📦 Processing raw message:', messageData);
-            
-            // Try to parse if message is a string
-            const parsedData = typeof messageData === 'string' ? JSON.parse(messageData) : messageData;
-            console.log('📦 Parsed message data:', parsedData);
-
-            // Extract message data, checking both root and message property
-            const messageContent = parsedData.message || parsedData;
-            
-            const formattedMessage = {
-              from: messageContent.From || messageContent.from || messageContent.sender || messageContent.phoneNumber,
-              to: messageContent.To || messageContent.to || messageContent.recipient || 'me',
-              message: messageContent.Body || messageContent.body || messageContent.text || messageContent.message || messageContent.content,
-              timestamp: messageContent.timestamp || messageContent.time || new Date().toISOString(),
-              direction: messageContent.direction || 'inbound'
+          messages.forEach(rawMessage => {
+            const messageData = {
+              from: rawMessage.from,
+              to: rawMessage.to,
+              message: rawMessage.message,
+              timestamp: rawMessage.timestamp || new Date().toISOString(),
+              direction: 'inbound'
             };
-
-            console.log('🔍 Formatted message:', formattedMessage);
             
-            // Create a unique ID for the message
-            const messageId = `${formattedMessage.from}-${formattedMessage.message}-${formattedMessage.timestamp}`;
+            console.log('✨ Adding message:', messageData);
             
-            // Skip if we've recently added this message
-            if (recentMessageIds.has(messageId)) {
-              console.log('⏭️ Skipping duplicate message:', messageId);
-              return;
-            }
+            setMessages(prev => [...prev, messageData]);
             
-            // Validate message
-            if (!formattedMessage.from || !formattedMessage.message) {
-              console.warn('⚠️ Invalid message format:', {
-                original: messageData,
-                parsed: parsedData,
-                formatted: formattedMessage
-              });
-              return;
-            }
-            
-            // Add to recent messages
-            recentMessageIds.add(messageId);
-            // Clean up old messages after 5 seconds
-            setTimeout(() => recentMessageIds.delete(messageId), 5000);
-            
-            console.log('✨ Adding message to UI:', formattedMessage);
-            setMessages(prev => {
-              const newMessages = [...prev, formattedMessage];
-              return newMessages;
+            toast({
+              title: 'New Message',
+              description: `From: ${messageData.from}`,
+              status: 'info',
+              duration: 3000,
+              isClosable: true,
             });
-            
-            // Only show toast for inbound messages
-            if (formattedMessage.direction === 'inbound') {
-              toast({
-                title: 'New Message',
-                description: `From: ${formattedMessage.from}`,
-                status: 'info',
-                duration: 5000,
-                isClosable: true,
-              });
-            }
           });
         } catch (error) {
-          console.error('❌ Error processing message:', {
+          console.error('❌ Error handling message:', {
             error: error.message,
-            originalData: data,
-            stack: error.stack
+            data
           });
         }
       });
@@ -155,7 +109,6 @@ function App() {
         throw new Error(responseData.message || 'Failed to send message');
       }
 
-      // Add sent message to messages state
       const sentMessage = {
         from: 'me',
         to: selectedUser,
