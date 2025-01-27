@@ -28,24 +28,33 @@ function App() {
     console.log('🎧 Setting up listeners for events:', inboundEvents);
 
     inboundEvents.forEach(event => {
-      socket.on(event, (data) => {
-        console.log(`📥 Raw inbound message:`, data);
+      socket.on(event, (rawData) => {
+        console.log(`📥 Raw socket event:`, rawData);
         try {
-          const messages = Array.isArray(data) ? data : [data];
+          // Extract message from data array if present
+          const data = Array.isArray(rawData.data) ? rawData.data[0] : rawData;
+          console.log('📦 Processing message:', data);
           
-          messages.forEach(rawMessage => {
-            const messageData = {
-              from: rawMessage.from,
-              to: rawMessage.to,
-              message: rawMessage.message,
-              timestamp: rawMessage.timestamp || new Date().toISOString(),
-              direction: 'inbound'
-            };
-            
-            console.log('✨ Adding message:', messageData);
-            
-            setMessages(prev => [...prev, messageData]);
-            
+          // Message should already be in the correct format
+          const messageData = {
+            from: data.from,
+            to: data.to,
+            message: data.message,
+            timestamp: data.timestamp,
+            direction: data.direction
+          };
+          
+          // Validate message
+          if (!messageData.from || !messageData.message) {
+            console.warn('⚠️ Invalid message:', messageData);
+            return;
+          }
+
+          console.log('✨ Adding message to UI:', messageData);
+          setMessages(prev => [...prev, messageData]);
+          
+          // Show notification for inbound messages
+          if (messageData.direction === 'inbound') {
             toast({
               title: 'New Message',
               description: `From: ${messageData.from}`,
@@ -53,11 +62,11 @@ function App() {
               duration: 3000,
               isClosable: true,
             });
-          });
+          }
         } catch (error) {
           console.error('❌ Error handling message:', {
             error: error.message,
-            data
+            rawData
           });
         }
       });
