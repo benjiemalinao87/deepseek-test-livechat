@@ -1,0 +1,187 @@
+import React, { useState, useEffect } from 'react';
+import { ChakraProvider, Box, useColorMode, VStack, IconButton, useToast, Image, HStack } from '@chakra-ui/react';
+import { UserList } from './components/chat/UserList';
+import { MessageList } from './components/chat/MessageList';
+import { MessageInput } from './components/chat/MessageInput';
+import { ContactForm } from './components/chat/ContactForm';
+import { Plus, Moon, Sun, MessageCircle } from 'lucide-react';
+import { socket } from './socket';
+import axios from 'axios';
+import { DockWindow } from './components/dock/DockWindow';
+
+function App() {
+  const { colorMode, toggleColorMode } = useColorMode();
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [message, setMessage] = useState('');
+  const [messages, setMessages] = useState([]);
+  const [showAddContact, setShowAddContact] = useState(false);
+  const [showChat, setShowChat] = useState(false);
+  const [connected, setConnected] = useState(false);
+  const [users, setUsers] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const toast = useToast();
+
+  const isDark = colorMode === 'dark';
+
+  useEffect(() => {
+    socket.on('connect', () => {
+      console.log('Connected to server');
+      setConnected(true);
+      toast({
+        title: 'Connected',
+        description: 'Successfully connected to the server',
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      });
+    });
+
+    socket.on('disconnect', () => {
+      console.log('Disconnected from server');
+      setConnected(false);
+      toast({
+        title: 'Disconnected',
+        description: 'Lost connection to the server',
+        status: 'error',
+        duration: null,
+        isClosable: true,
+      });
+    });
+
+    socket.on('new_message', (newMsg) => {
+      console.log('New message received:', newMsg);
+      setMessages(prev => [...prev, newMsg]);
+    });
+
+    return () => {
+      socket.off('connect');
+      socket.off('disconnect');
+      socket.off('new_message');
+    };
+  }, [toast]);
+
+  const handleSendMessage = async () => {
+    if (!selectedUser || !message.trim()) return;
+
+    try {
+      const response = await axios.post(`${process.env.REACT_APP_API_URL}/send-sms`, {
+        to: selectedUser,
+        message: message.trim()
+      });
+
+      if (response.data.success) {
+        setMessage('');
+      }
+    } catch (error) {
+      console.error('Error sending message:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to send message',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+    }
+  };
+
+  const handleAddContact = async (contact) => {
+    setUsers(prev => [...prev, contact]);
+    setShowAddContact(false);
+    toast({
+      title: 'Contact Added',
+      description: 'Successfully added new contact',
+      status: 'success',
+      duration: 3000,
+      isClosable: true,
+    });
+  };
+
+  const filteredMessages = messages.filter(msg => 
+    msg.from === selectedUser || msg.to === selectedUser
+  );
+
+  return (
+    <ChakraProvider>
+      <Box minH="100vh" bg={isDark ? 'gray.800' : 'gray.50'} position="relative">
+        {/* Dock */}
+        <Box
+          position="fixed"
+          bottom="20px"
+          left="50%"
+          transform="translateX(-50%)"
+          bg={isDark ? 'gray.700' : 'white'}
+          p={2}
+          borderRadius="full"
+          boxShadow="lg"
+          zIndex={1000}
+        >
+          <HStack spacing={4}>
+            <IconButton
+              icon={<MessageCircle />}
+              colorScheme="blue"
+              variant="ghost"
+              isRound
+              onClick={() => setShowChat(true)}
+            />
+            <IconButton
+              icon={isDark ? <Sun /> : <Moon />}
+              onClick={toggleColorMode}
+              variant="ghost"
+              isRound
+            />
+          </HStack>
+        </Box>
+
+        {/* Chat Window */}
+        {showChat && (
+          <DockWindow title="LiveChat" onClose={() => setShowChat(false)}>
+            <Box h="100%" display="flex">
+              {/* Left Panel */}
+              <Box w="300px" borderRight="1px solid" borderColor={isDark ? 'gray.700' : 'gray.200'}>
+                <VStack h="100%" spacing={0}>
+                  <Box p={4} w="100%">
+                    <IconButton
+                      icon={<Plus />}
+                      onClick={() => setShowAddContact(true)}
+                      size="sm"
+                      colorScheme="blue"
+                      variant="ghost"
+                      isRound
+                    />
+                  </Box>
+                  <UserList
+                    users={users}
+                    selectedUser={selectedUser}
+                    onSelectUser={setSelectedUser}
+                    messages={messages}
+                  />
+                </VStack>
+              </Box>
+
+              {/* Right Panel */}
+              <Box flex="1" display="flex" flexDirection="column">
+                <MessageList messages={filteredMessages} />
+                <MessageInput
+                  message={message}
+                  onChange={setMessage}
+                  onSend={handleSendMessage}
+                />
+              </Box>
+            </Box>
+          </DockWindow>
+        )}
+
+        {/* Add Contact Modal */}
+        {showAddContact && (
+          <ContactForm
+            isOpen={showAddContact}
+            onClose={() => setShowAddContact(false)}
+            onSubmit={handleAddContact}
+          />
+        )}
+      </Box>
+    </ChakraProvider>
+  );
+}
+
+export default App;

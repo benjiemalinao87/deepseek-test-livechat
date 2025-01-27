@@ -1,0 +1,14 @@
+#!/bin/bash
+
+# The phone number to send to
+TO="+16267888830"
+
+# The message to send
+MESSAGE="Hello! This is a test message from the LiveChat app."
+
+# Send the request to the backend
+curl -X POST https://cc.automate8.com/send-sms \
+  -H "Content-Type: application/json" \
+  -d "{\"to\": \"$TO\", \"message\": \"$MESSAGE\"}"
+
+echo -e "\n\nRequest sent! Check your phone for the message."
