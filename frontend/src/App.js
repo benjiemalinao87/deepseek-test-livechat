@@ -35,13 +35,13 @@ function App() {
           const data = Array.isArray(rawData.data) ? rawData.data[0] : rawData;
           console.log('📦 Processing message:', data);
           
-          // Message should already be in the correct format
+          // Check if message is in the expected format
           const messageData = {
-            from: data.from,
-            to: data.to,
-            message: data.message,
-            timestamp: data.timestamp,
-            direction: data.direction
+            from: data.from || data.From,
+            to: data.to || data.To,
+            message: data.message || data.Body || data.text || '',
+            timestamp: data.timestamp || data.Timestamp || new Date().toISOString(),
+            direction: data.direction || 'inbound'
           };
           
           // Validate message
