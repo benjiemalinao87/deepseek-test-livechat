@@ -1,14 +1,16 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import { DockWindow } from '../dock/DockWindow';
-import { Box, Button, VStack, useDisclosure, useToast } from '@chakra-ui/react';
+import { Box, Button, VStack, useDisclosure, useToast, Progress } from '@chakra-ui/react';
 import { ContactForm } from '../chat/ContactForm';
 import axios from 'axios';
 
 export function ContactWindow() {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const toast = useToast();
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleAddContact = useCallback(async (formData) => {
+    setIsLoading(true);
     try {
       console.log('Adding contact:', formData); // Debug log
       
@@ -53,11 +55,16 @@ export function ContactWindow() {
         isClosable: true,
       });
       throw error;
+    } finally {
+      setIsLoading(false);
     }
   }, [toast, onClose]);
 
   return (
     <DockWindow title="Contacts">
+      {isLoading && (
+        <Progress size="xs" isIndeterminate colorScheme="blue" position="absolute" top={0} left={0} right={0} />
+      )}
       <VStack spacing={4} align="stretch" p={4}>
         <Button colorScheme="blue" onClick={onOpen}>
           Add Contact
