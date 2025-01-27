@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { Box, IconButton, HStack, Text, useColorModeValue } from '@chakra-ui/react';
 import { X, Minus, Square } from 'lucide-react';
+import Draggable from 'react-draggable';
 
 export const DockWindow = ({ title, onClose, children }) => {
   const [isMinimized, setIsMinimized] = useState(false);
   
-  // Move hooks inside the component
   const bgColor = useColorModeValue('white', 'gray.800');
   const borderColor = useColorModeValue('gray.200', 'gray.700');
   const headerBg = useColorModeValue('gray.100', 'gray.700');
@@ -14,77 +14,84 @@ export const DockWindow = ({ title, onClose, children }) => {
   if (isMinimized) return null;
 
   return (
-    <Box
-      position="fixed"
-      top="50%"
-      left="50%"
-      transform="translate(-50%, -50%)"
-      w="80%"
-      maxW="1000px"
-      h="80vh"
-      bg={bgColor}
-      borderRadius="lg"
-      boxShadow="xl"
-      overflow="hidden"
-      border="1px solid"
-      borderColor={borderColor}
-      css={{
-        '&::-webkit-scrollbar': {
-          width: '4px',
-        },
-        '&::-webkit-scrollbar-track': {
-          width: '6px',
-        },
-        '&::-webkit-scrollbar-thumb': {
-          background: scrollbarThumbColor,
-          borderRadius: '24px',
-        },
-      }}
+    <Draggable
+      handle=".window-handle"
+      bounds="parent"
+      defaultPosition={{x: window.innerWidth/4, y: window.innerHeight/4}}
     >
-      {/* Window Title Bar */}
       <Box
-        p={2}
-        bg={headerBg}
-        borderBottom="1px solid"
+        position="absolute"
+        w="80%"
+        maxW="1000px"
+        h="80vh"
+        bg={bgColor}
+        borderRadius="lg"
+        boxShadow="xl"
+        overflow="hidden"
+        border="1px solid"
         borderColor={borderColor}
-        display="flex"
-        alignItems="center"
-        justifyContent="space-between"
+        css={{
+          '&::-webkit-scrollbar': {
+            width: '4px',
+          },
+          '&::-webkit-scrollbar-track': {
+            width: '6px',
+          },
+          '&::-webkit-scrollbar-thumb': {
+            background: scrollbarThumbColor,
+            borderRadius: '24px',
+          },
+        }}
+        style={{ cursor: 'auto' }}
       >
-        <HStack spacing={2}>
-          <IconButton
-            size="sm"
-            icon={<X size={12} />}
-            colorScheme="red"
-            variant="ghost"
-            isRound
-            onClick={onClose}
-          />
-          <IconButton
-            size="sm"
-            icon={<Minus size={12} />}
-            colorScheme="yellow"
-            variant="ghost"
-            isRound
-            onClick={() => setIsMinimized(true)}
-          />
-          <IconButton
-            size="sm"
-            icon={<Square size={12} />}
-            colorScheme="green"
-            variant="ghost"
-            isRound
-          />
-        </HStack>
-        <Text fontSize="sm" fontWeight="medium">{title}</Text>
-        <Box w={70} /> {/* Spacer to center the title */}
-      </Box>
+        {/* Window Title Bar */}
+        <Box
+          className="window-handle"
+          p={2}
+          bg={headerBg}
+          borderBottom="1px solid"
+          borderColor={borderColor}
+          display="flex"
+          alignItems="center"
+          justifyContent="space-between"
+          style={{ cursor: 'move' }}
+          userSelect="none"
+        >
+          <HStack spacing={2}>
+            <IconButton
+              size="sm"
+              icon={<X size={12} />}
+              colorScheme="red"
+              variant="ghost"
+              isRound
+              onClick={onClose}
+            />
+            <IconButton
+              size="sm"
+              icon={<Minus size={12} />}
+              colorScheme="yellow"
+              variant="ghost"
+              isRound
+              onClick={() => setIsMinimized(true)}
+            />
+            <IconButton
+              size="sm"
+              icon={<Square size={12} />}
+              colorScheme="green"
+              variant="ghost"
+              isRound
+            />
+          </HStack>
+          <Text fontSize="sm" fontWeight="medium">{title}</Text>
+          <Box w={70} /> {/* Spacer to center the title */}
+        </Box>
 
-      {/* Window Content */}
-      <Box h="calc(100% - 45px)" overflow="hidden">
-        {children}
+        {/* Window Content */}
+        <Box h="calc(100% - 45px)" overflow="hidden">
+          {children}
+        </Box>
       </Box>
-    </Box>
+    </Draggable>
   );
 };
 
