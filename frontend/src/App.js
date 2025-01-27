@@ -34,19 +34,23 @@ function App() {
       setConnected(false);
     });
 
-    socket.on('inbound_message', (message) => {
-      console.log('New inbound message received:', message);
-      setMessages(prev => [...prev, {
-        from: message.from,
-        to: message.to,
-        message: message.message,
-        timestamp: message.timestamp || new Date().toISOString()
-      }]);
+    // Listen for SMS received events
+    socket.on('message', (message) => {
+      console.log('New SMS received:', message);
+      const formattedMessage = {
+        from: message.from || message.sender,
+        to: message.to || message.recipient || 'me',
+        message: message.body || message.text || message.message || '',
+        timestamp: message.timestamp || new Date().toISOString(),
+        direction: 'inbound'
+      };
+      console.log('Formatted message:', formattedMessage);
+      setMessages(prev => [...prev, formattedMessage]);
       
       // Show notification for new message
       toast({
         title: 'New Message',
-        description: `From: ${message.from}`,
+        description: `From: ${formattedMessage.from}`,
         status: 'info',
         duration: 5000,
         isClosable: true,
@@ -56,7 +60,7 @@ function App() {
     return () => {
       socket.off('connect');
       socket.off('disconnect');
-      socket.off('inbound_message');
+      socket.off('message');
     };
   }, [toast]);
 
@@ -84,8 +88,10 @@ function App() {
         from: 'me',
         to: selectedUser,
         message: message.trim(),
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        direction: 'outbound'
       };
+      console.log('Sent message:', sentMessage);
       setMessages(prev => [...prev, sentMessage]);
       
       setMessage('');
