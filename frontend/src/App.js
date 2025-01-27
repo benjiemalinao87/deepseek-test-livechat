@@ -72,19 +72,20 @@ function App() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json'
         },
         body: JSON.stringify({
-          to: selectedUser,
-          message: message.trim()
+          recipient: selectedUser,
+          text: message.trim()
         })
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to send message');
-      }
-
       const responseData = await response.json();
       console.log('SMS API Response:', responseData);
+
+      if (!response.ok) {
+        throw new Error(responseData.message || 'Failed to send message');
+      }
 
       // Add sent message to messages state
       const sentMessage = {
@@ -109,7 +110,7 @@ function App() {
       console.error('Error sending message:', error);
       toast({
         title: 'Error',
-        description: 'Failed to send message',
+        description: error.message || 'Failed to send message',
         status: 'error',
         duration: 3000,
         isClosable: true,
