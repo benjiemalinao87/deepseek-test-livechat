@@ -12,7 +12,10 @@ const socket = io(SOCKET_URL, {
   reconnectionAttempts: 5,
   reconnectionDelay: 1000,
   timeout: 20000,
-  forceNew: true
+  forceNew: true,
+  query: {
+    client: 'web'
+  }
 });
 
 // Add socket event listeners for debugging
@@ -21,23 +24,31 @@ socket.on('connect', () => {
 });
 
 socket.on('connect_error', (error) => {
-  console.error('❌ Socket connection error:', {
-    message: error.message,
-    description: error.description,
-    type: error.type
-  });
+  console.error('❌ Socket connection error:', error);
 });
 
 socket.on('disconnect', (reason) => {
-  console.log('🔌 Socket disconnected:', reason);
+  console.log('❌ Socket disconnected:', reason);
+});
+
+socket.on('reconnect', (attemptNumber) => {
+  console.log('🔄 Socket reconnected after', attemptNumber, 'attempts');
+});
+
+socket.on('reconnect_error', (error) => {
+  console.error('❌ Socket reconnection error:', error);
+});
+
+socket.on('error', (error) => {
+  console.error('❌ Socket error:', error);
 });
 
 // Debug all incoming events
-socket.onAny((eventName, ...args) => {
-  console.log('🎯 Socket Event:', {
-    event: eventName,
-    args: args
-  });
-});
+// socket.onAny((eventName, ...args) => {
+//   console.log('🎯 Socket Event:', {
+//     event: eventName,
+//     args: args
+//   });
+// });
 
 export { socket };

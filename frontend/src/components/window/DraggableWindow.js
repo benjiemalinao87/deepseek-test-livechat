@@ -1,10 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Box, HStack, IconButton, Text, useColorModeValue } from '@chakra-ui/react';
 import { X, Minus, Square } from 'lucide-react';
 import Draggable from 'react-draggable';
 
 export const DraggableWindow = ({ title, onClose, children, defaultPosition = { x: 50, y: 50 } }) => {
   const [isMinimized, setIsMinimized] = useState(false);
+  const [windowSize, setWindowSize] = useState({ width: 800, height: 600 });
+  const [isResizing, setIsResizing] = useState(false);
+  const resizeRef = useRef(null);
   
   // Color mode hooks
   const bgColor = useColorModeValue('whiteAlpha.800', 'blackAlpha.700');
@@ -12,6 +15,41 @@ export const DraggableWindow = ({ title, onClose, children, defaultPosition = { 
   const headerBg = useColorModeValue('whiteAlpha.500', 'blackAlpha.400');
   const scrollbarThumbColor = useColorModeValue('gray.400', 'gray.600');
   const textColor = useColorModeValue('gray.800', 'white');
+
+  const handleMouseDown = (e) => {
+    if (e.target === resizeRef.current) {
+      setIsResizing(true);
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isResizing) return;
+
+    const newWidth = Math.max(800, e.clientX - e.target.getBoundingClientRect().left);
+    const newHeight = Math.max(600, e.clientY - e.target.getBoundingClientRect().top);
+    
+    setWindowSize({
+      width: newWidth,
+      height: newHeight
+    });
+  };
+
+  const handleMouseUp = () => {
+    setIsResizing(false);
+  };
+
+  React.useEffect(() => {
+    if (isResizing) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+    }
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing]);
 
   if (isMinimized) return null;
 
@@ -22,14 +60,14 @@ export const DraggableWindow = ({ title, onClose, children, defaultPosition = { 
       bounds={{
         left: 0,
         top: 0,
-        right: window.innerWidth - 800,
-        bottom: window.innerHeight - 700
+        right: window.innerWidth - windowSize.width,
+        bottom: window.innerHeight - windowSize.height
       }}
     >
       <Box
         position="absolute"
-        width="800px"
-        height="600px"
+        width={`${windowSize.width}px`}
+        height={`${windowSize.height}px`}
         bg={bgColor}
         borderRadius="lg"
         boxShadow="xl"
@@ -101,6 +139,44 @@ export const DraggableWindow = ({ title, onClose, children, defaultPosition = { 
         <Box p={4} height="calc(100% - 45px)" overflowY="auto">
           {children}
         </Box>
+
+        {/* Resize Handle */}
+        <Box
+          ref={resizeRef}
+          position="absolute"
+          bottom={2}
+          right={2}
+          w="20px"
+          h="20px"
+          cursor="nwse-resize"
+          onMouseDown={handleMouseDown}
+          borderRadius="full"
+          bg="blue.500"
+          opacity="0.8"
+          _hover={{ opacity: 1 }}
+          transition="opacity 0.2s"
+          zIndex={1000}
+          _before={{
+            content: '""',
+            position: 'absolute',
+            bottom: '6px',
+            right: '6px',
+            width: '8px',
+            height: '2px',
+            bg: 'white',
+            transform: 'rotate(-45deg)'
+          }}
+          _after={{
+            content: '""',
+            position: 'absolute',
+            bottom: '9px',
+            right: '9px',
+            width: '8px',
+            height: '2px',
+            bg: 'white',
+            transform: 'rotate(-45deg)'
+          }}
+        />
       </Box>
     </Draggable>
   );

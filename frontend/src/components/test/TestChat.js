@@ -1,64 +1,60 @@
-import React, { useState, useEffect } from 'react';
-import { Box, useToast, useColorMode, useColorModeValue } from '@chakra-ui/react';
-import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
+import React, { useState, useEffect, useRef } from 'react';
+import { 
+  Box, 
+  useToast, 
+  useColorMode, 
+  useColorModeValue, 
+  Grid, 
+  GridItem,
+  HStack,
+  IconButton,
+  Text,
+  Spacer
+} from '@chakra-ui/react';
 import { socket } from '../../socket';
 import { ContactList } from './ContactList';
 import { ChatArea } from './ChatArea';
 import { UserDetails } from './UserDetails';
 import { AddContactModal } from './AddContactModal';
+import { StatusMenu } from './StatusMenu';
+import { X, Minus, Square } from 'lucide-react';
+import Draggable from 'react-draggable';
 
-export const TestChat = () => {
-  const [phone, setPhone] = useState('');
-  const [message, setMessage] = useState('');
+export const TestChat = ({ isDark, onClose }) => {
+  const [selectedPhone, setSelectedPhone] = useState(null);
   const [messages, setMessages] = useState([]);
-  const [isConnected, setIsConnected] = useState(false);
   const [contacts, setContacts] = useState([
-    {
-      id: 1,
-      name: 'Test User',
-      phone: '+16267888830',
-      avatar: 'TU',
-      lastMessage: 'No messages yet',
-      time: '2m ago'
-    },
-    {
-      id: 2,
-      name: 'Test User2',
-      phone: '+16265539681',
-      avatar: 'TU2',
-      lastMessage: 'No messages yet',
-      time: '1m ago'
-    },
-    {
-      id: 3,
-      name: 'Test User3',
-      phone: '+16265539682',
-      avatar: 'TU3',
-      lastMessage: 'No messages yet',
-      time: 'Just now'
-    }
+    { id: 1, name: 'Test User', phone: '+16267888830', time: '2m ago', status: 'Open' },
+    { id: 2, name: 'Test User2', phone: '+16267888831', time: '1m ago', status: 'Done' },
+    { id: 3, name: 'Test User3', phone: '+16267888832', time: 'Just now', status: 'Pending' },
   ]);
-  const [isNewContactModalOpen, setIsNewContactModalOpen] = useState(false);
+  const [isAddContactModalOpen, setIsAddContactModalOpen] = useState(false);
   const [newContact, setNewContact] = useState({ name: '', phone: '' });
-  
-  const toast = useToast();
-  const { colorMode } = useColorMode();
-  const isDark = colorMode === 'dark';
-  const bg = useColorModeValue('white', 'gray.800');
-  const borderColor = useColorModeValue('gray.200', 'gray.700');
+  const [isConnected, setIsConnected] = useState(false);
+  const [windowSize, setWindowSize] = useState({ width: 800, height: 600 });
+  const [isResizing, setIsResizing] = useState(false);
+  const resizeRef = useRef(null);
+  const containerRef = useRef(null);
 
+  const bg = useColorModeValue('whiteAlpha.800', 'blackAlpha.700');
+  const borderColor = useColorModeValue('whiteAlpha.300', 'whiteAlpha.100');
+  const headerBg = useColorModeValue('whiteAlpha.500', 'blackAlpha.400');
+  const textColor = useColorModeValue('gray.800', 'white');
+  const toast = useToast();
+
+  // Socket.IO Event Handlers
   useEffect(() => {
-    socket.on('connect', () => {
+    const handleConnect = () => {
       console.log('✅ Connected to socket');
       setIsConnected(true);
-    });
+    };
 
-    socket.on('disconnect', () => {
+    const handleDisconnect = () => {
       console.log('❌ Disconnected from socket');
       setIsConnected(false);
-    });
+    };
 
-    socket.on('new_message', (data) => {
+    const handleNewMessage = (data) => {
       console.log('📥 Received message:', data);
       if (!data || !data.message) {
         console.warn('⚠️ Invalid message data:', data);
@@ -83,17 +79,57 @@ export const TestChat = () => {
           duration: 3000,
         });
       }
-    });
+    };
+
+    socket.on('connect', handleConnect);
+    socket.on('disconnect', handleDisconnect);
+    socket.on('new_message', handleNewMessage);
 
     return () => {
-      socket.off('connect');
-      socket.off('disconnect');
-      socket.off('new_message');
+      socket.off('connect', handleConnect);
+      socket.off('disconnect', handleDisconnect);
+      socket.off('new_message', handleNewMessage);
     };
   }, [toast]);
 
-  const handleSendMessage = async () => {
-    if (!message || !phone) {
+  const handleMouseDown = (e) => {
+    if (e.target === resizeRef.current) {
+      setIsResizing(true);
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isResizing || !containerRef.current) return;
+
+    const container = containerRef.current.getBoundingClientRect();
+    const newWidth = Math.max(800, e.clientX - container.left);
+    const newHeight = Math.max(600, e.clientY - container.top);
+    
+    setWindowSize({
+      width: newWidth,
+      height: newHeight
+    });
+  };
+
+  const handleMouseUp = () => {
+    setIsResizing(false);
+  };
+
+  useEffect(() => {
+    if (isResizing) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+    }
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing]);
+
+  const handleSendMessage = async (message, to) => {
+    if (!message || !to) {
       toast({
         title: 'Error',
         description: 'Please enter both phone number and message',
@@ -105,17 +141,18 @@ export const TestChat = () => {
 
     try {
       console.log('📤 Sending message:', {
-        to: phone,
+        to: to,
         message: message
       });
 
+      // Send message using HTTP endpoint
       const response = await fetch('https://cc.automate8.com/send-sms', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          to: phone,
+          to: to,
           message: message.trim()
         }),
       });
@@ -123,9 +160,10 @@ export const TestChat = () => {
       const data = await response.json();
       
       if (data.success) {
+        // Create outbound message object
         const outboundMessage = {
           from: '+13256665486',
-          to: phone,
+          to: to,
           message: message.trim(),
           timestamp: new Date().toISOString(),
           direction: 'outbound',
@@ -133,6 +171,7 @@ export const TestChat = () => {
           status: data.status
         };
 
+        // Add message to state
         setMessages(prev => {
           const isDuplicate = prev.some(m => 
             m.messageSid === data.messageSid || 
@@ -143,7 +182,6 @@ export const TestChat = () => {
           return [...prev, outboundMessage];
         });
 
-        setMessage('');
         toast({
           title: 'Message sent',
           status: 'success',
@@ -180,13 +218,14 @@ export const TestChat = () => {
       phone: newContact.phone,
       avatar: newContact.name.split(' ').map(n => n[0]).join('').toUpperCase(),
       lastMessage: 'No messages yet',
-      time: 'Just now'
+      time: 'Just now',
+      status: 'Open'
     };
 
     setContacts(prev => [...prev, newContactData]);
     setNewContact({ name: '', phone: '' });
-    setIsNewContactModalOpen(false);
-    setPhone(newContactData.phone);
+    setIsAddContactModalOpen(false);
+    setSelectedPhone(newContactData.phone);
 
     toast({
       title: 'Contact added',
@@ -196,64 +235,174 @@ export const TestChat = () => {
     });
   };
 
-  const ResizeHandle = () => (
-    <PanelResizeHandle className="ResizeHandleOuter">
-      <Box 
-        w="4px" 
-        bg={borderColor} 
-        h="100%" 
-        cursor="col-resize"
-        _hover={{ bg: 'blue.500' }}
-        transition="background 0.2s"
-      />
-    </PanelResizeHandle>
-  );
+  const handleStatusChange = (newStatus) => {
+    setContacts(contacts.map(contact => 
+      contact.phone === selectedPhone 
+        ? { ...contact, status: newStatus }
+        : contact
+    ));
+  };
 
-  const selectedContact = contacts.find(c => c.phone === phone);
+  const selectedContact = contacts.find(c => c.phone === selectedPhone);
 
   return (
-    <>
-      <Box h="100vh" bg={bg} position="relative">
-        <PanelGroup direction="horizontal">
-          <Panel defaultSize={20} minSize={15}>
-            <ContactList 
-              contacts={contacts}
-              selectedPhone={phone}
-              onSelectContact={setPhone}
-              onAddContact={() => setIsNewContactModalOpen(true)}
-              messages={messages}
-              isDark={isDark}
+    <Draggable
+      handle=".window-handle"
+      defaultPosition={{ x: 50, y: 50 }}
+      bounds={{
+        left: 0,
+        top: 0,
+        right: window.innerWidth - windowSize.width,
+        bottom: window.innerHeight - windowSize.height
+      }}
+    >
+      <Box
+        ref={containerRef}
+        width={`${windowSize.width}px`}
+        height={`${windowSize.height}px`}
+        bg={bg}
+        position="absolute"
+        borderRadius="lg"
+        overflow="hidden"
+        boxShadow="xl"
+        border="1px solid"
+        borderColor={borderColor}
+        backdropFilter="blur(10px)"
+      >
+        {/* Window Title Bar */}
+        <HStack
+          className="window-handle"
+          px={3}
+          py={2}
+          bg={headerBg}
+          cursor="grab"
+          justify="space-between"
+          userSelect="none"
+          borderBottom="1px solid"
+          borderColor={borderColor}
+          _active={{ cursor: "grabbing" }}
+        >
+          <HStack spacing={2}>
+            <IconButton
+              size="xs"
+              icon={<X size={12} />}
+              isRound
+              aria-label="Close"
+              bg="red.400"
+              _hover={{ bg: 'red.500' }}
+              onClick={onClose}
             />
-          </Panel>
-
-          <ResizeHandle />
-
-          <Panel defaultSize={55} minSize={30}>
-            <ChatArea 
-              selectedContact={selectedContact}
-              messages={messages}
-              message={message}
-              onMessageChange={setMessage}
-              onSendMessage={handleSendMessage}
-              isDark={isDark}
+            <IconButton
+              size="xs"
+              icon={<Minus size={12} />}
+              isRound
+              aria-label="Minimize"
+              bg="yellow.400"
+              _hover={{ bg: 'yellow.500' }}
             />
-          </Panel>
+            <IconButton
+              size="xs"
+              icon={<Square size={12} />}
+              isRound
+              aria-label="Maximize"
+              bg="green.400"
+              _hover={{ bg: 'green.500' }}
+            />
+          </HStack>
+          <HStack>
+            <Text fontSize="sm" fontWeight="medium" color={textColor}>
+              Live Chat
+            </Text>
+            {selectedContact && (
+              <StatusMenu 
+                currentStatus={selectedContact.status} 
+                onStatusChange={handleStatusChange} 
+              />
+            )}
+          </HStack>
+          <Box w={70} /> {/* Spacer to center the title */}
+        </HStack>
 
-          <ResizeHandle />
+        {/* Window Content */}
+        <Box height="calc(100% - 45px)">
+          <Grid
+            templateColumns="300px 1fr 300px"
+            h="100%"
+            overflow="hidden"
+          >
+            <GridItem borderRight="1px" borderColor={borderColor} overflow="hidden">
+              <ContactList
+                contacts={contacts}
+                selectedPhone={selectedPhone}
+                onSelectContact={setSelectedPhone}
+                onAddContact={() => setIsAddContactModalOpen(true)}
+                messages={messages}
+                isDark={isDark}
+              />
+            </GridItem>
+            <GridItem overflow="hidden">
+              <ChatArea
+                selectedContact={selectedContact}
+                messages={messages.filter(
+                  m => m.to === selectedPhone || m.from === selectedPhone
+                )}
+                onSendMessage={handleSendMessage}
+                socket={socket}
+                isDark={isDark}
+              />
+            </GridItem>
+            <GridItem borderLeft="1px" borderColor={borderColor} overflow="hidden">
+              <UserDetails selectedContact={selectedContact} />
+            </GridItem>
+          </Grid>
+        </Box>
 
-          <Panel defaultSize={25} minSize={15}>
-            <UserDetails selectedContact={selectedContact} />
-          </Panel>
-        </PanelGroup>
+        {/* Resize Handle */}
+        <Box
+          ref={resizeRef}
+          position="absolute"
+          bottom={2}
+          right={2}
+          w="20px"
+          h="20px"
+          cursor="nwse-resize"
+          onMouseDown={handleMouseDown}
+          borderRadius="full"
+          bg="blue.500"
+          opacity="0.8"
+          _hover={{ opacity: 1 }}
+          transition="opacity 0.2s"
+          zIndex={1000}
+          _before={{
+            content: '""',
+            position: 'absolute',
+            bottom: '6px',
+            right: '6px',
+            width: '8px',
+            height: '2px',
+            bg: 'white',
+            transform: 'rotate(-45deg)'
+          }}
+          _after={{
+            content: '""',
+            position: 'absolute',
+            bottom: '9px',
+            right: '9px',
+            width: '8px',
+            height: '2px',
+            bg: 'white',
+            transform: 'rotate(-45deg)'
+          }}
+        />
+
+        <AddContactModal 
+          isOpen={isAddContactModalOpen}
+          onClose={() => setIsAddContactModalOpen(false)}
+          onNewContactChange={setNewContact}
+          onAddContact={handleAddContact}
+          newContact={newContact}
+        />
       </Box>
-
-      <AddContactModal 
-        isOpen={isNewContactModalOpen}
-        onClose={() => setIsNewContactModalOpen(false)}
-        newContact={newContact}
-        onNewContactChange={setNewContact}
-        onAddContact={handleAddContact}
-      />
-    </>
+    </Draggable>
   );
 };

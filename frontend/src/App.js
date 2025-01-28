@@ -4,6 +4,9 @@ import { Moon, Sun } from 'lucide-react';
 import { TestChat } from './components/test/TestChat';
 import { Dock } from './components/dock/Dock';
 import { DraggableWindow } from './components/window/DraggableWindow';
+import { Pipeline } from './components/pipelines/Pipeline';
+import { Contacts } from './components/contacts/Contacts';
+import { CalendarContainer } from './components/calendar/CalendarContainer';
 
 // Placeholder components for other sections
 const PlaceholderView = ({ title }) => (
@@ -29,14 +32,34 @@ function App() {
 
   const renderWindowContent = (windowId) => {
     switch (windowId) {
-      case 'livechat':
-        return <TestChat />;
       case 'contacts':
-        return <PlaceholderView title="Contacts" />;
+        return <Contacts onClose={() => handleWindowClose('contacts')} />;
       case 'pipelines':
-        return <PlaceholderView title="Pipelines" />;
+        return (
+          <DraggableWindow
+            title="Pipelines"
+            onClose={() => handleWindowClose('pipelines')}
+            defaultPosition={{ x: 100, y: 50 }}
+            defaultSize={{ width: 1200, height: 600 }}
+          >
+            <Box h="100%" overflow="hidden">
+              <Pipeline />
+            </Box>
+          </DraggableWindow>
+        );
       case 'calendar':
-        return <PlaceholderView title="Calendar" />;
+        return (
+          <DraggableWindow
+            title="Calendar"
+            onClose={() => handleWindowClose('calendar')}
+            defaultPosition={{ x: 100, y: 50 }}
+            defaultSize={{ width: 1200, height: 800 }}
+          >
+            <Box h="100%" overflow="hidden">
+              <CalendarContainer />
+            </Box>
+          </DraggableWindow>
+        );
       case 'dialer':
         return <PlaceholderView title="Dialer" />;
       case 'tools':
@@ -44,13 +67,12 @@ function App() {
       case 'settings':
         return <PlaceholderView title="Settings" />;
       default:
-        return <TestChat />;
+        return null;
     }
   };
 
   const getWindowTitle = (windowId) => {
     const titles = {
-      livechat: 'Live Chat',
       contacts: 'Contacts',
       pipelines: 'Pipelines',
       calendar: 'Calendar',
@@ -101,17 +123,67 @@ function App() {
             />
           </Box>
           
-          {/* Windows */}
-          {activeWindows.map((windowId, index) => (
+          {/* Contacts Window */}
+          {activeWindows.includes('contacts') && (
             <DraggableWindow
-              key={windowId}
-              title={getWindowTitle(windowId)}
-              onClose={() => handleWindowClose(windowId)}
-              defaultPosition={getDefaultPosition(index)}
+              title="Contacts"
+              onClose={() => handleWindowClose('contacts')}
+              defaultPosition={{ x: 100, y: 50 }}
+              defaultSize={{ width: 800, height: 600 }}
             >
-              {renderWindowContent(windowId)}
+              <Contacts />
             </DraggableWindow>
-          ))}
+          )}
+
+          {/* LiveChat Window */}
+          {activeWindows.includes('livechat') && (
+            <TestChat 
+              isDark={isDark} 
+              onClose={() => handleWindowClose('livechat')}
+            />
+          )}
+
+          {/* Calendar Window */}
+          {activeWindows.includes('calendar') && (
+            <DraggableWindow
+              title="Calendar"
+              onClose={() => handleWindowClose('calendar')}
+              defaultPosition={{ x: 100, y: 50 }}
+              defaultSize={{ width: 1200, height: 800 }}
+            >
+              <Box h="100%" overflow="hidden">
+                <CalendarContainer />
+              </Box>
+            </DraggableWindow>
+          )}
+
+          {/* Pipelines Window */}
+          {activeWindows.includes('pipelines') && (
+            <DraggableWindow
+              title="Pipelines"
+              onClose={() => handleWindowClose('pipelines')}
+              defaultPosition={{ x: 100, y: 50 }}
+              defaultSize={{ width: 1200, height: 600 }}
+            >
+              <Box h="100%" overflow="hidden">
+                <Pipeline />
+              </Box>
+            </DraggableWindow>
+          )}
+
+          {/* Other Windows */}
+          {activeWindows
+            .filter(windowId => !['livechat', 'contacts', 'calendar', 'pipelines'].includes(windowId))
+            .map((windowId, index) => (
+              <DraggableWindow
+                key={windowId}
+                title={getWindowTitle(windowId)}
+                onClose={() => handleWindowClose(windowId)}
+                defaultPosition={getDefaultPosition(index)}
+              >
+                {renderWindowContent(windowId)}
+              </DraggableWindow>
+            ))}
 
           {/* Dock */}
           <Dock onItemClick={handleDockItemClick} activeItem={activeWindows[activeWindows.length - 1]} />
