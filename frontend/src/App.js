@@ -18,6 +18,7 @@ const PlaceholderView = ({ title }) => (
 function App() {
   const { colorMode, toggleColorMode } = useColorMode();
   const [activeWindows, setActiveWindows] = useState(['livechat']);
+  const [selectedContact, setSelectedContact] = useState(null);
   const isDark = colorMode === 'dark';
 
   const handleWindowClose = (windowId) => {
@@ -43,7 +44,13 @@ function App() {
             defaultSize={{ width: 1200, height: 600 }}
           >
             <Box h="100%" overflow="hidden">
-              <Pipeline />
+              <Pipeline onOpenChat={(contact) => {
+                // Add livechat to active windows if not already active
+                if (!activeWindows.includes('livechat')) {
+                  setActiveWindows([...activeWindows, 'livechat']);
+                }
+                setSelectedContact(contact);
+              }} />
             </Box>
           </DraggableWindow>
         );
@@ -140,6 +147,7 @@ function App() {
             <TestChat 
               isDark={isDark} 
               onClose={() => handleWindowClose('livechat')}
+              selectedContact={selectedContact}
             />
           )}
 

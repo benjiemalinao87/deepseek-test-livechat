@@ -21,6 +21,7 @@ const eventTypes = {
 export const CalendarSidebar = ({ events, activeFilters, onFilterChange }) => {
   const bgColor = useColorModeValue('white', 'gray.800');
   const borderColor = useColorModeValue('gray.200', 'gray.700');
+  const hoverBgColor = useColorModeValue('gray.50', 'gray.700');
 
   const upcomingEvents = events
     .filter(event => new Date(event.start) > new Date())
@@ -75,7 +76,7 @@ export const CalendarSidebar = ({ events, activeFilters, onFilterChange }) => {
               borderRadius="md"
               border="1px solid"
               borderColor={borderColor}
-              _hover={{ bg: useColorModeValue('gray.50', 'gray.700') }}
+              _hover={{ bg: hoverBgColor }}
             >
               <HStack justify="space-between" mb={1}>
                 <Text fontSize="sm" fontWeight="medium">

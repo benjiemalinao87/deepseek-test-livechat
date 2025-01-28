@@ -20,7 +20,7 @@ import { StatusMenu } from './StatusMenu';
 import { X, Minus, Square } from 'lucide-react';
 import Draggable from 'react-draggable';
 
-export const TestChat = ({ isDark, onClose }) => {
+export const TestChat = ({ isDark, onClose, selectedContact: initialSelectedContact }) => {
   const [selectedPhone, setSelectedPhone] = useState(null);
   const [messages, setMessages] = useState([]);
   const [contacts, setContacts] = useState([
@@ -91,6 +91,27 @@ export const TestChat = ({ isDark, onClose }) => {
       socket.off('new_message', handleNewMessage);
     };
   }, [toast]);
+
+  // Add effect to handle initialSelectedContact changes
+  useEffect(() => {
+    if (initialSelectedContact) {
+      const existingContact = contacts.find(c => c.phone === initialSelectedContact.phone);
+      if (!existingContact) {
+        // Add the contact if it doesn't exist
+        const newContactData = {
+          id: contacts.length + 1,
+          name: initialSelectedContact.name,
+          phone: initialSelectedContact.phone,
+          avatar: initialSelectedContact.name.split(' ').map(n => n[0]).join('').toUpperCase(),
+          lastMessage: initialSelectedContact.lastMessage || 'No messages yet',
+          time: initialSelectedContact.time || 'Just now',
+          status: 'Open'
+        };
+        setContacts(prev => [...prev, newContactData]);
+      }
+      setSelectedPhone(initialSelectedContact.phone);
+    }
+  }, [initialSelectedContact]);
 
   const handleMouseDown = (e) => {
     if (e.target === resizeRef.current) {
@@ -243,7 +264,7 @@ export const TestChat = ({ isDark, onClose }) => {
     ));
   };
 
-  const selectedContact = contacts.find(c => c.phone === selectedPhone);
+  const currentContact = contacts.find(c => c.phone === selectedPhone);
 
   return (
     <Draggable
@@ -313,9 +334,9 @@ export const TestChat = ({ isDark, onClose }) => {
             <Text fontSize="sm" fontWeight="medium" color={textColor}>
               Live Chat
             </Text>
-            {selectedContact && (
+            {currentContact && (
               <StatusMenu 
-                currentStatus={selectedContact.status} 
+                currentStatus={currentContact.status} 
                 onStatusChange={handleStatusChange} 
               />
             )}
@@ -342,7 +363,7 @@ export const TestChat = ({ isDark, onClose }) => {
             </GridItem>
             <GridItem overflow="hidden">
               <ChatArea
-                selectedContact={selectedContact}
+                selectedContact={currentContact}
                 messages={messages.filter(
                   m => m.to === selectedPhone || m.from === selectedPhone
                 )}
@@ -352,7 +373,7 @@ export const TestChat = ({ isDark, onClose }) => {
               />
             </GridItem>
             <GridItem borderLeft="1px" borderColor={borderColor} overflow="hidden">
-              <UserDetails selectedContact={selectedContact} />
+              <UserDetails selectedContact={currentContact} />
             </GridItem>
           </Grid>
         </Box>

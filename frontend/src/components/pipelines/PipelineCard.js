@@ -16,7 +16,7 @@ import {
 } from '@chakra-ui/react';
 import { MoreVertical, MessageCircle } from 'lucide-react';
 
-export const PipelineCard = ({ card }) => {
+export const PipelineCard = ({ card, onOpenChat }) => {
   const cardBg = useColorModeValue('white', 'gray.800');
   const borderColor = useColorModeValue('gray.200', 'gray.700');
   const textColor = useColorModeValue('gray.800', 'white');
@@ -26,6 +26,11 @@ export const PipelineCard = ({ card }) => {
     high: 'red',
     medium: 'yellow',
     low: 'green'
+  };
+
+  const handleChatClick = (e) => {
+    e.stopPropagation(); // Prevent drag from starting
+    onOpenChat(card);
   };
 
   return (
@@ -63,7 +68,7 @@ export const PipelineCard = ({ card }) => {
           />
           <MenuList>
             <MenuItem>View Details</MenuItem>
-            <MenuItem>Start Chat</MenuItem>
+            <MenuItem onClick={handleChatClick}>Start Chat</MenuItem>
             <MenuItem>Edit</MenuItem>
             <MenuItem color="red.500">Remove</MenuItem>
           </MenuList>
@@ -87,6 +92,7 @@ export const PipelineCard = ({ card }) => {
               icon={<MessageCircle size={14} />}
               size="xs"
               variant="ghost"
+              onClick={handleChatClick}
             />
           </Tooltip>
         </HStack>

@@ -9,7 +9,7 @@ import {
 import { initialPipelineData } from './PipelineData';
 import { PipelineCard } from './PipelineCard';
 
-export const Pipeline = () => {
+export const Pipeline = ({ onOpenChat }) => {
   const [pipelineData, setPipelineData] = useState(initialPipelineData);
   const stageBg = useColorModeValue('gray.50', 'gray.900');
   const borderColor = useColorModeValue('gray.200', 'gray.700');
@@ -47,6 +47,16 @@ export const Pipeline = () => {
         [sourceStageId]: sourceStage,
         [targetStageId]: targetStage,
       },
+    });
+  };
+
+  const handleOpenChat = (card) => {
+    onOpenChat({
+      id: card.phone, // Using phone as the unique identifier
+      name: card.name,
+      phone: card.phone,
+      lastMessage: card.lastMessage,
+      time: card.time
     });
   };
 
@@ -106,7 +116,11 @@ export const Pipeline = () => {
                         draggable
                         onDragStart={(e) => handleDragStart(e, card.id, stageId)}
                       >
-                        <PipelineCard card={card} index={index} />
+                        <PipelineCard 
+                          card={card} 
+                          index={index} 
+                          onOpenChat={handleOpenChat}
+                        />
                       </Box>
                     ))}
                   </VStack>
