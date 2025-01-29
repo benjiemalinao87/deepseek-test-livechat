@@ -7,7 +7,9 @@ import {
   Grid, 
   GridItem,
   HStack,
+  IconButton,
   Text,
+  Spacer
 } from '@chakra-ui/react';
 import { socket } from '../../socket';
 import { ContactList } from './ContactList';
@@ -15,8 +17,10 @@ import { ChatArea } from './ChatArea';
 import { UserDetails } from './UserDetails';
 import { AddContactModal } from './AddContactModal';
 import { StatusMenu } from './StatusMenu';
+import { X, Minus, Square } from 'lucide-react';
+import Draggable from 'react-draggable';
 
-export const TestChat = ({ isDark, selectedContact: initialSelectedContact }) => {
+export const TestChat = ({ isDark, onClose, selectedContact: initialSelectedContact }) => {
   const [selectedPhone, setSelectedPhone] = useState(null);
   const [messages, setMessages] = useState([]);
   const [contacts, setContacts] = useState([
@@ -27,18 +31,18 @@ export const TestChat = ({ isDark, selectedContact: initialSelectedContact }) =>
   const [isAddContactModalOpen, setIsAddContactModalOpen] = useState(false);
   const [newContact, setNewContact] = useState({ name: '', phone: '' });
   const [isConnected, setIsConnected] = useState(false);
+  const [windowSize, setWindowSize] = useState({ width: 800, height: 600 });
+  const [isResizing, setIsResizing] = useState(false);
+  const resizeRef = useRef(null);
   const containerRef = useRef(null);
 
-  const bg = useColorModeValue('whiteAlpha.900', 'gray.900');
-  const borderColor = useColorModeValue('gray.200', 'gray.700');
-  const contentBg = useColorModeValue('white', 'gray.800');
-  const textColor = useColorModeValue('gray.800', 'whiteAlpha.900');
-  const mutedTextColor = useColorModeValue('gray.600', 'gray.400');
-  const scrollbarThumbColor = useColorModeValue('gray.300', 'gray.600');
-  const scrollbarTrackColor = useColorModeValue('gray.100', 'gray.800');
+  const bg = useColorModeValue('whiteAlpha.800', 'blackAlpha.700');
+  const borderColor = useColorModeValue('whiteAlpha.300', 'whiteAlpha.100');
+  const headerBg = useColorModeValue('whiteAlpha.500', 'blackAlpha.400');
+  const textColor = useColorModeValue('gray.800', 'white');
   const toast = useToast();
 
-  // Keep all the existing socket and message handling logic
+  // Socket.IO Event Handlers
   useEffect(() => {
     const handleConnect = () => {
       console.log('✅ Connected to socket');
@@ -88,11 +92,12 @@ export const TestChat = ({ isDark, selectedContact: initialSelectedContact }) =>
     };
   }, [toast]);
 
-  // Keep initialSelectedContact handling
+  // Add effect to handle initialSelectedContact changes
   useEffect(() => {
     if (initialSelectedContact) {
       const existingContact = contacts.find(c => c.phone === initialSelectedContact.phone);
       if (!existingContact) {
+        // Add the contact if it doesn't exist
         const newContactData = {
           id: contacts.length + 1,
           name: initialSelectedContact.name,
@@ -108,28 +113,104 @@ export const TestChat = ({ isDark, selectedContact: initialSelectedContact }) =>
     }
   }, [initialSelectedContact]);
 
+  const handleMouseDown = (e) => {
+    if (e.target === resizeRef.current) {
+      setIsResizing(true);
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isResizing || !containerRef.current) return;
+
+    const container = containerRef.current.getBoundingClientRect();
+    const newWidth = Math.max(800, e.clientX - container.left);
+    const newHeight = Math.max(600, e.clientY - container.top);
+    
+    setWindowSize({
+      width: newWidth,
+      height: newHeight
+    });
+  };
+
+  const handleMouseUp = () => {
+    setIsResizing(false);
+  };
+
+  useEffect(() => {
+    if (isResizing) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+    }
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing]);
+
   const handleSendMessage = async (message, to) => {
+    if (!message || !to) {
+      toast({
+        title: 'Error',
+        description: 'Please enter both phone number and message',
+        status: 'error',
+        duration: 3000,
+      });
+      return;
+    }
+
     try {
-      console.log('📤 Sending message:', { message, to });
-      
-      const timestamp = new Date().toISOString();
-      const newMessage = {
-        direction: 'outbound',
-        message,
-        to,
-        from: 'SYSTEM',
-        timestamp,
-      };
-
-      setMessages(prev => [...prev, newMessage]);
-
-      // Emit the message through socket
-      socket.emit('send_message', {
-        to,
-        message,
-        timestamp
+      console.log('📤 Sending message:', {
+        to: to,
+        message: message
       });
 
+      // Send message using HTTP endpoint
+      const response = await fetch('https://cc.automate8.com/send-sms', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          to: to,
+          message: message.trim()
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        // Create outbound message object
+        const outboundMessage = {
+          from: '+13256665486',
+          to: to,
+          message: message.trim(),
+          timestamp: new Date().toISOString(),
+          direction: 'outbound',
+          messageSid: data.messageSid,
+          status: data.status
+        };
+
+        // Add message to state
+        setMessages(prev => {
+          const isDuplicate = prev.some(m => 
+            m.messageSid === data.messageSid || 
+            (m.timestamp === outboundMessage.timestamp && m.message === outboundMessage.message)
+          );
+          
+          if (isDuplicate) return prev;
+          return [...prev, outboundMessage];
+        });
+
+        toast({
+          title: 'Message sent',
+          status: 'success',
+          duration: 3000,
+        });
+      } else {
+        throw new Error(data.error || 'Failed to send message');
+      }
     } catch (error) {
       console.error('❌ Send message error:', error);
       toast({
@@ -139,7 +220,7 @@ export const TestChat = ({ isDark, selectedContact: initialSelectedContact }) =>
         duration: 3000,
       });
     }
-  }
+  };
 
   const handleAddContact = () => {
     if (!newContact.name || !newContact.phone) {
@@ -186,85 +267,163 @@ export const TestChat = ({ isDark, selectedContact: initialSelectedContact }) =>
   const currentContact = contacts.find(c => c.phone === selectedPhone);
 
   return (
-    <Box
-      ref={containerRef}
-      height="100%"
-      bg={contentBg}
-      borderRadius="lg"
-      overflow="hidden"
-      border="1px solid"
-      borderColor={borderColor}
-      boxShadow={isDark ? 'dark-lg' : 'lg'}
-      css={{
-        '&::-webkit-scrollbar': {
-          width: '4px',
-        },
-        '&::-webkit-scrollbar-track': {
-          background: scrollbarTrackColor,
-        },
-        '&::-webkit-scrollbar-thumb': {
-          background: scrollbarThumbColor,
-          borderRadius: '4px',
-        },
+    <Draggable
+      handle=".window-handle"
+      defaultPosition={{ x: 50, y: 50 }}
+      bounds={{
+        left: 0,
+        top: 0,
+        right: window.innerWidth - windowSize.width,
+        bottom: window.innerHeight - windowSize.height
       }}
     >
-      {/* Chat Content */}
-      <Grid
-        templateColumns="300px 1fr 300px"
-        h="100%"
-        overflow="hidden"
+      <Box
+        ref={containerRef}
+        width={`${windowSize.width}px`}
+        height={`${windowSize.height}px`}
         bg={bg}
+        position="absolute"
+        borderRadius="lg"
+        overflow="hidden"
+        boxShadow="xl"
+        border="1px solid"
+        borderColor={borderColor}
+        backdropFilter="blur(10px)"
       >
-        <GridItem 
-          borderRight="1px" 
-          borderColor={borderColor} 
-          overflow="hidden"
-          bg={contentBg}
+        {/* Window Title Bar */}
+        <HStack
+          className="window-handle"
+          px={3}
+          py={2}
+          bg={headerBg}
+          cursor="grab"
+          justify="space-between"
+          userSelect="none"
+          borderBottom="1px solid"
+          borderColor={borderColor}
+          _active={{ cursor: "grabbing" }}
         >
-          <ContactList
-            contacts={contacts}
-            selectedPhone={selectedPhone}
-            onSelectContact={setSelectedPhone}
-            onAddContact={() => setIsAddContactModalOpen(true)}
-            messages={messages}
-            isDark={isDark}
-          />
-        </GridItem>
-        <GridItem 
-          overflow="hidden"
-          bg={contentBg}
-        >
-          <ChatArea
-            selectedContact={currentContact}
-            messages={messages.filter(
-              m => m.to === selectedPhone || m.from === selectedPhone
+          <HStack spacing={2}>
+            <IconButton
+              size="xs"
+              icon={<X size={12} />}
+              isRound
+              aria-label="Close"
+              bg="red.400"
+              _hover={{ bg: 'red.500' }}
+              onClick={onClose}
+            />
+            <IconButton
+              size="xs"
+              icon={<Minus size={12} />}
+              isRound
+              aria-label="Minimize"
+              bg="yellow.400"
+              _hover={{ bg: 'yellow.500' }}
+            />
+            <IconButton
+              size="xs"
+              icon={<Square size={12} />}
+              isRound
+              aria-label="Maximize"
+              bg="green.400"
+              _hover={{ bg: 'green.500' }}
+            />
+          </HStack>
+          <HStack>
+            <Text fontSize="sm" fontWeight="medium" color={textColor}>
+              Live Chat
+            </Text>
+            {currentContact && (
+              <StatusMenu 
+                currentStatus={currentContact.status} 
+                onStatusChange={handleStatusChange} 
+              />
             )}
-            onSendMessage={handleSendMessage}
-            socket={socket}
-            isDark={isDark}
-          />
-        </GridItem>
-        <GridItem 
-          borderLeft="1px" 
-          borderColor={borderColor} 
-          overflow="hidden"
-          bg={contentBg}
-        >
-          <UserDetails 
-            selectedContact={currentContact} 
-            textColor={textColor}
-            mutedTextColor={mutedTextColor}
-          />
-        </GridItem>
-      </Grid>
+          </HStack>
+          <Box w={70} /> {/* Spacer to center the title */}
+        </HStack>
 
-      <AddContactModal 
-        isOpen={isAddContactModalOpen}
-        onClose={() => setIsAddContactModalOpen(false)}
-        onNewContactChange={setNewContact}
-        onAddContact={handleAddContact}
-        newContact={newContact}
-      />
-    </Box>
+        {/* Window Content */}
+        <Box height="calc(100% - 45px)">
+          <Grid
+            templateColumns="300px 1fr 300px"
+            h="100%"
+            overflow="hidden"
+          >
+            <GridItem borderRight="1px" borderColor={borderColor} overflow="hidden">
+              <ContactList
+                contacts={contacts}
+                selectedPhone={selectedPhone}
+                onSelectContact={setSelectedPhone}
+                onAddContact={() => setIsAddContactModalOpen(true)}
+                messages={messages}
+                isDark={isDark}
+              />
+            </GridItem>
+            <GridItem overflow="hidden">
+              <ChatArea
+                selectedContact={currentContact}
+                messages={messages.filter(
+                  m => m.to === selectedPhone || m.from === selectedPhone
+                )}
+                onSendMessage={handleSendMessage}
+                socket={socket}
+                isDark={isDark}
+              />
+            </GridItem>
+            <GridItem borderLeft="1px" borderColor={borderColor} overflow="hidden">
+              <UserDetails selectedContact={currentContact} />
+            </GridItem>
+          </Grid>
+        </Box>
+
+        {/* Resize Handle */}
+        <Box
+          ref={resizeRef}
+          position="absolute"
+          bottom={2}
+          right={2}
+          w="20px"
+          h="20px"
+          cursor="nwse-resize"
+          onMouseDown={handleMouseDown}
+          borderRadius="full"
+          bg="blue.500"
+          opacity="0.8"
+          _hover={{ opacity: 1 }}
+          transition="opacity 0.2s"
+          zIndex={1000}
+          _before={{
+            content: '""',
+            position: 'absolute',
+            bottom: '6px',
+            right: '6px',
+            width: '8px',
+            height: '2px',
+            bg: 'white',
+            transform: 'rotate(-45deg)'
+          }}
+          _after={{
+            content: '""',
+            position: 'absolute',
+            bottom: '9px',
+            right: '9px',
+            width: '8px',
+            height: '2px',
+            bg: 'white',
+            transform: 'rotate(-45deg)'
+          }}
+        />
+
+        <AddContactModal 
+          isOpen={isAddContactModalOpen}
+          onClose={() => setIsAddContactModalOpen(false)}
+          onNewContactChange={setNewContact}
+          onAddContact={handleAddContact}
+          newContact={newContact}
+        />
+      </Box>
+    </Draggable>
   );
 };
