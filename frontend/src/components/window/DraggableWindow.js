@@ -3,9 +3,12 @@ import { Box, HStack, IconButton, Text, useColorModeValue } from '@chakra-ui/rea
 import { X, Minus, Square } from 'lucide-react';
 import Draggable from 'react-draggable';
 
-export const DraggableWindow = ({ title, onClose, children, defaultPosition = { x: 50, y: 50 } }) => {
+export const DraggableWindow = ({ title, onClose, children, defaultPosition = { x: 50, y: 50 }, defaultSize = { width: 800, height: 600 } }) => {
   const [isMinimized, setIsMinimized] = useState(false);
-  const [windowSize, setWindowSize] = useState({ width: 800, height: 600 });
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [windowSize, setWindowSize] = useState(defaultSize);
+  const [previousSize, setPreviousSize] = useState(defaultSize);
+  const [previousPosition, setPreviousPosition] = useState(defaultPosition);
   const [isResizing, setIsResizing] = useState(false);
   const resizeRef = useRef(null);
   
@@ -15,6 +18,24 @@ export const DraggableWindow = ({ title, onClose, children, defaultPosition = { 
   const headerBg = useColorModeValue('whiteAlpha.500', 'blackAlpha.400');
   const scrollbarThumbColor = useColorModeValue('gray.400', 'gray.600');
   const textColor = useColorModeValue('gray.800', 'white');
+
+  const toggleFullscreen = () => {
+    if (isFullscreen) {
+      // Restore previous size and position
+      setWindowSize(previousSize);
+      setIsFullscreen(false);
+    } else {
+      // Save current size and position before going fullscreen
+      setPreviousSize(windowSize);
+      setPreviousPosition(defaultPosition);
+      // Set to fullscreen
+      setWindowSize({
+        width: window.innerWidth,
+        height: window.innerHeight
+      });
+      setIsFullscreen(true);
+    }
+  };
 
   const handleMouseDown = (e) => {
     if (e.target === resizeRef.current) {
@@ -57,6 +78,8 @@ export const DraggableWindow = ({ title, onClose, children, defaultPosition = { 
     <Draggable
       handle=".window-handle"
       defaultPosition={defaultPosition}
+      position={isFullscreen ? { x: 0, y: 0 } : undefined}
+      disabled={isFullscreen}
       bounds={{
         left: 0,
         top: 0,
@@ -69,12 +92,13 @@ export const DraggableWindow = ({ title, onClose, children, defaultPosition = { 
         width={`${windowSize.width}px`}
         height={`${windowSize.height}px`}
         bg={bgColor}
-        borderRadius="lg"
-        boxShadow="xl"
+        borderRadius={isFullscreen ? "0" : "lg"}
+        boxShadow={isFullscreen ? "none" : "xl"}
         overflow="hidden"
         border="1px solid"
         borderColor={borderColor}
         backdropFilter="blur(10px)"
+        transition="all 0.2s"
         css={{
           '&::-webkit-scrollbar': {
             width: '4px',
@@ -94,12 +118,12 @@ export const DraggableWindow = ({ title, onClose, children, defaultPosition = { 
           px={3}
           py={2}
           bg={headerBg}
-          cursor="grab"
+          cursor={isFullscreen ? "default" : "grab"}
           justify="space-between"
           userSelect="none"
           borderBottom="1px solid"
           borderColor={borderColor}
-          _active={{ cursor: "grabbing" }}
+          _active={{ cursor: isFullscreen ? "default" : "grabbing" }}
         >
           <HStack spacing={2}>
             <IconButton
@@ -124,9 +148,10 @@ export const DraggableWindow = ({ title, onClose, children, defaultPosition = { 
               size="xs"
               icon={<Square size={12} />}
               isRound
-              aria-label="Maximize"
+              aria-label="Toggle Fullscreen"
               bg="green.400"
               _hover={{ bg: 'green.500' }}
+              onClick={toggleFullscreen}
             />
           </HStack>
           <Text fontSize="sm" fontWeight="medium" color={textColor}>
@@ -140,43 +165,45 @@ export const DraggableWindow = ({ title, onClose, children, defaultPosition = { 
           {children}
         </Box>
 
-        {/* Resize Handle */}
-        <Box
-          ref={resizeRef}
-          position="absolute"
-          bottom={2}
-          right={2}
-          w="20px"
-          h="20px"
-          cursor="nwse-resize"
-          onMouseDown={handleMouseDown}
-          borderRadius="full"
-          bg="blue.500"
-          opacity="0.8"
-          _hover={{ opacity: 1 }}
-          transition="opacity 0.2s"
-          zIndex={1000}
-          _before={{
-            content: '""',
-            position: 'absolute',
-            bottom: '6px',
-            right: '6px',
-            width: '8px',
-            height: '2px',
-            bg: 'white',
-            transform: 'rotate(-45deg)'
-          }}
-          _after={{
-            content: '""',
-            position: 'absolute',
-            bottom: '9px',
-            right: '9px',
-            width: '8px',
-            height: '2px',
-            bg: 'white',
-            transform: 'rotate(-45deg)'
-          }}
-        />
+        {/* Resize Handle - Only show when not fullscreen */}
+        {!isFullscreen && (
+          <Box
+            ref={resizeRef}
+            position="absolute"
+            bottom={2}
+            right={2}
+            w="20px"
+            h="20px"
+            cursor="nwse-resize"
+            onMouseDown={handleMouseDown}
+            borderRadius="full"
+            bg="blue.500"
+            opacity="0.8"
+            _hover={{ opacity: 1 }}
+            transition="opacity 0.2s"
+            zIndex={1000}
+            _before={{
+              content: '""',
+              position: 'absolute',
+              bottom: '6px',
+              right: '6px',
+              width: '8px',
+              height: '2px',
+              bg: 'white',
+              transform: 'rotate(-45deg)'
+            }}
+            _after={{
+              content: '""',
+              position: 'absolute',
+              bottom: '9px',
+              right: '9px',
+              width: '8px',
+              height: '2px',
+              bg: 'white',
+              transform: 'rotate(-45deg)'
+            }}
+          />
+        )}
       </Box>
     </Draggable>
   );

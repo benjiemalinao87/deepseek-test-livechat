@@ -7,6 +7,7 @@ import { DraggableWindow } from './components/window/DraggableWindow';
 import { Pipeline } from './components/pipelines/Pipeline';
 import { Contacts } from './components/contacts/Contacts';
 import { CalendarContainer } from './components/calendar/CalendarContainer';
+import { DialerContainer } from './components/dialer/DialerContainer';
 
 // Placeholder components for other sections
 const PlaceholderView = ({ title }) => (
@@ -45,7 +46,6 @@ function App() {
           >
             <Box h="100%" overflow="hidden">
               <Pipeline onOpenChat={(contact) => {
-                // Add livechat to active windows if not already active
                 if (!activeWindows.includes('livechat')) {
                   setActiveWindows([...activeWindows, 'livechat']);
                 }
@@ -55,20 +55,9 @@ function App() {
           </DraggableWindow>
         );
       case 'calendar':
-        return (
-          <DraggableWindow
-            title="Calendar"
-            onClose={() => handleWindowClose('calendar')}
-            defaultPosition={{ x: 100, y: 50 }}
-            defaultSize={{ width: 1200, height: 800 }}
-          >
-            <Box h="100%" overflow="hidden">
-              <CalendarContainer />
-            </Box>
-          </DraggableWindow>
-        );
+        return <CalendarContainer onClose={() => handleWindowClose('calendar')} />;
       case 'dialer':
-        return <PlaceholderView title="Dialer" />;
+        return <DialerContainer onClose={() => handleWindowClose('dialer')} />;
       case 'tools':
         return <PlaceholderView title="Tools" />;
       case 'settings':
@@ -144,11 +133,19 @@ function App() {
 
           {/* LiveChat Window */}
           {activeWindows.includes('livechat') && (
-            <TestChat 
-              isDark={isDark} 
+            <DraggableWindow
+              title="Live Chat"
               onClose={() => handleWindowClose('livechat')}
-              selectedContact={selectedContact}
-            />
+              defaultPosition={{ x: 100, y: 50 }}
+              defaultSize={{ width: 1200, height: 700 }}
+            >
+              <Box h="100%" overflow="hidden">
+                <TestChat 
+                  isDark={isDark} 
+                  selectedContact={selectedContact}
+                />
+              </Box>
+            </DraggableWindow>
           )}
 
           {/* Calendar Window */}
@@ -179,9 +176,14 @@ function App() {
             </DraggableWindow>
           )}
 
+          {/* Dialer */}
+          {activeWindows.includes('dialer') && (
+            <DialerContainer onClose={() => handleWindowClose('dialer')} />
+          )}
+
           {/* Other Windows */}
           {activeWindows
-            .filter(windowId => !['livechat', 'contacts', 'calendar', 'pipelines'].includes(windowId))
+            .filter(windowId => !['livechat', 'contacts', 'calendar', 'pipelines', 'dialer'].includes(windowId))
             .map((windowId, index) => (
               <DraggableWindow
                 key={windowId}
