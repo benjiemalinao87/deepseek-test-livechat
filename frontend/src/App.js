@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ChakraProvider, Box, useColorMode, IconButton, Center, Text } from '@chakra-ui/react';
 import { Moon, Sun } from 'lucide-react';
-import { LiveChat } from './components/chat/LiveChat';
+import { LiveChat } from './components/livechat/LiveChat';
 import { Dock } from './components/dock/Dock';
 import { DraggableWindow } from './components/window/DraggableWindow';
 import { Pipeline } from './components/pipelines/Pipeline';
