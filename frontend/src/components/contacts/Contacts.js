@@ -14,15 +14,18 @@ import {
   Flex,
   Spacer,
 } from '@chakra-ui/react';
-import { Search, Plus, Filter, Grid, List } from 'lucide-react';
+import { Search, Plus, Filter, Grid, List, UserPlus } from 'lucide-react';
 import { ContactCard } from './ContactCard';
 import { demoContacts } from './ContactData';
+import AddContactModal from './AddContactModal';
+import { useDisclosure } from '@chakra-ui/react';
 
 export const Contacts = () => {
   const [contacts] = useState(demoContacts);
   const [viewMode, setViewMode] = useState('grid');
   const borderColor = useColorModeValue('gray.200', 'gray.700');
   const bgColor = useColorModeValue('gray.50', 'gray.900');
+  const { isOpen, onOpen, onClose } = useDisclosure();
 
   return (
     <Box h="100%" bg={bgColor}>
@@ -59,13 +62,13 @@ export const Contacts = () => {
           <Spacer />
 
           <Tooltip label="Add New Contact">
-            <Button
-              leftIcon={<Plus size={16} />}
+            <IconButton
+              icon={<UserPlus size={16} />}
+              aria-label="Add Contact"
               colorScheme="blue"
               size="sm"
-            >
-              Add Contact
-            </Button>
+              onClick={onOpen}
+            />
           </Tooltip>
 
           {/* View Mode Toggle */}
@@ -117,6 +120,8 @@ export const Contacts = () => {
           ))}
         </VStack>
       </Box>
+
+      <AddContactModal isOpen={isOpen} onClose={onClose} />
     </Box>
   );
 };
