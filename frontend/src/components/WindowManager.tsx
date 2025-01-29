@@ -1,7 +1,7 @@
 import React from "react";
 import { Box } from "@chakra-ui/react";
 import { motion } from "framer-motion";
-import { LiveChat } from "../components/livechat/LiveChat";
+import { LiveChat } from "./chat/LiveChat";
 import { Contact } from "./windows/Contact";
 import { Automation } from "./windows/Automation";
 import { Tools } from "./windows/Tools";
