@@ -154,4 +154,93 @@
    - Efficient animations with Framer Motion
    - Proper use of React.memo for expensive components
    - Optimized re-renders with proper dependency arrays
-   - Lazy loading of tab content 
+   - Lazy loading of tab content
+
+## Window Management
+### Best Practices
+1. **Component Hierarchy**
+   - Keep window wrapper separate from content components
+   - Use single source of truth for window state
+   - Avoid nested window components
+   - Standardize window sizing across the application
+
+2. **File Organization**
+   - Place window wrappers in dedicated 'windows' directory
+   - Keep content components separate from window management
+   - Remove duplicate window components
+   - Maintain clear import paths
+
+3. **Props Management**
+   - Keep window props minimal and focused
+   - Pass only necessary props to prevent confusion
+   - Use consistent prop naming across window components
+   - Document required vs optional window props
+
+### Common Pitfalls to Avoid
+1. **Component Structure**
+   - Duplicate window wrappers causing nested windows
+   - Mixed responsibilities between window and content
+   - Inconsistent window sizing
+   - Redundant state management
+
+2. **File Management**
+   - Multiple versions of the same window component
+   - Mixed TypeScript and JavaScript implementations
+   - Unclear component ownership
+   - Scattered window-related code
+
+3. **State Handling**
+   - Multiple sources of truth for window state
+   - Unnecessary prop drilling
+   - Complex window management logic
+   - Inconsistent window behavior
+
+### Successful Patterns
+1. **Clean Separation**
+   ```javascript
+   // Window Wrapper (windows/MyWindow.js)
+   const MyWindow = ({ onClose }) => (
+     <DraggableWindow onClose={onClose}>
+       <MyContent />
+     </DraggableWindow>
+   );
+
+   // Content Component (components/MyContent.js)
+   const MyContent = () => (
+     <Box>
+       // Actual content here
+     </Box>
+   );
+   ```
+
+2. **Standardized Sizing**
+   ```javascript
+   const windowSize = { width: '80vw', height: '80vh' };
+   <DraggableWindow size={windowSize} />;
+   ```
+
+3. **Clear Component Hierarchy**
+   - App.js
+     - WindowManager
+       - DraggableWindow
+         - ContentComponent
+
+## Animation Implementation
+### Updated Best Practices
+1. **Simplified Animations**
+   - Use basic transitions when possible
+   - Avoid complex delay calculations
+   - Ensure animation values are always finite
+   - Test animations across different states
+
+2. **Performance Considerations**
+   - Keep animations lightweight
+   - Use hardware acceleration when available
+   - Implement proper cleanup
+   - Monitor frame rates
+
+3. **Error Prevention**
+   - Validate animation values
+   - Provide fallbacks for failed animations
+   - Use try-catch for animation calculations
+   - Test edge cases 
