@@ -13,39 +13,78 @@ import {
   HStack,
   Progress,
   useColorModeValue,
+  Circle,
+  Flex,
+  Divider,
+  Badge,
+  Grid,
 } from '@chakra-ui/react';
 import { motion } from 'framer-motion';
-import { MessageCircle, Clock, Target, Award, TrendingUp } from 'lucide-react';
+import { MessageCircle, Clock, Target, Award, TrendingUp, ArrowUp, ArrowDown, ChevronRight } from 'lucide-react';
 
-const StatCard = ({ title, value, subtitle, icon: Icon, color }) => {
+const StatCard = ({ title, value, change, subtitle, icon: Icon, color, delay }) => {
   const bgColor = useColorModeValue('white', 'gray.800');
+  const isPositive = !change.includes('-');
+  const ArrowIcon = isPositive ? ArrowUp : ArrowDown;
   
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
+      transition={{ duration: 0.5, delay }}
     >
       <Box
         p={6}
         bg={bgColor}
-        borderRadius="xl"
-        boxShadow="lg"
-        border="1px solid"
-        borderColor={color}
-        _hover={{ transform: 'translateY(-2px)', transition: 'all 0.2s' }}
+        borderRadius="2xl"
+        boxShadow="xl"
+        position="relative"
+        overflow="hidden"
       >
-        <VStack spacing={3} align="start">
-          <HStack spacing={2}>
-            <Icon color={color} size={24} />
-            <Text fontSize="lg" fontWeight="semibold">{title}</Text>
+        {/* Background gradient */}
+        <Box
+          position="absolute"
+          top={0}
+          right={0}
+          w="150px"
+          h="150px"
+          bg={`radial-gradient(circle, ${color}20 0%, transparent 70%)`}
+          borderRadius="full"
+          transform="translate(30%, -30%)"
+        />
+
+        <VStack spacing={4} align="start">
+          <HStack spacing={3} width="full" justify="space-between">
+            <HStack spacing={3}>
+              <Circle size="40px" bg={`${color}20`}>
+                <Icon color={color} size={20} />
+              </Circle>
+              <Text fontSize="lg" fontWeight="medium">
+                {title}
+              </Text>
+            </HStack>
+            <Badge
+              px={3}
+              py={1}
+              borderRadius="full"
+              colorScheme={isPositive ? 'green' : 'red'}
+              variant="subtle"
+            >
+              <HStack spacing={1}>
+                <ArrowIcon size={14} />
+                <Text>{change.replace('-', '')}</Text>
+              </HStack>
+            </Badge>
           </HStack>
-          <Text fontSize="3xl" fontWeight="bold" color={color}>
-            {value}
-          </Text>
-          <Text fontSize="sm" color="gray.500">
-            {subtitle}
-          </Text>
+
+          <HStack spacing={4} align="baseline">
+            <Text fontSize="4xl" fontWeight="bold">
+              {value}
+            </Text>
+            <Text fontSize="sm" color="gray.500">
+              {subtitle}
+            </Text>
+          </HStack>
         </VStack>
       </Box>
     </motion.div>
@@ -56,16 +95,15 @@ export const WeeklyWrap = ({ demo = true }) => {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [stats, setStats] = useState(null);
   const bgColor = useColorModeValue('gray.50', 'gray.900');
+  const headerBgColor = useColorModeValue('blue.50', 'blue.900');
 
   useEffect(() => {
-    // For demo, show immediately
     if (demo) {
       fetchWeeklyStats();
       onOpen();
       return;
     }
 
-    // Normal Monday check for production
     const today = new Date();
     const lastShown = localStorage.getItem('lastWeeklyWrapShown');
     const isMonday = today.getDay() === 1;
@@ -78,27 +116,26 @@ export const WeeklyWrap = ({ demo = true }) => {
   }, [demo, onOpen]);
 
   const fetchWeeklyStats = () => {
-    // Simulated data for demo
     setStats({
       messagesHandled: {
         value: '324',
         change: '+15%',
-        subtitle: 'from last week'
+        subtitle: 'messages this week'
       },
       avgResponseTime: {
         value: '1.5m',
         change: '-30s',
-        subtitle: 'faster than last week'
+        subtitle: 'average response'
       },
       resolutionRate: {
         value: '92%',
         change: '+5%',
-        subtitle: 'improvement'
+        subtitle: 'resolution rate'
       },
       customerSatisfaction: {
         value: '4.8',
         change: '+0.3',
-        subtitle: 'stars average'
+        subtitle: 'CSAT score'
       }
     });
   };
@@ -109,100 +146,104 @@ export const WeeklyWrap = ({ demo = true }) => {
     <Modal 
       isOpen={isOpen} 
       onClose={onClose} 
-      size="xl"
+      size="2xl"
       motionPreset="slideInBottom"
+      isCentered
     >
       <ModalOverlay backdropFilter="blur(10px)" />
-      <ModalContent bg={bgColor} p={6}>
-        <ModalCloseButton />
-        <ModalBody>
-          <VStack spacing={8} align="stretch">
-            <VStack spacing={2} textAlign="center">
-              <motion.div
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
+      <ModalContent bg={bgColor} overflow="hidden">
+        <ModalCloseButton zIndex={2} />
+        
+        {/* Header Section */}
+        <Box bg={headerBgColor} p={8} position="relative">
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <VStack spacing={2} align="center">
+              <Text 
+                fontSize="sm" 
+                fontWeight="medium" 
+                color="blue.500"
+                textTransform="uppercase"
+                letterSpacing="wide"
               >
-                <Text fontSize="3xl" fontWeight="bold">
-                  Your Weekly Wrap
-                </Text>
-                <Text color="gray.500">
-                  Here's how you performed last week
-                </Text>
-              </motion.div>
+                Weekly Performance Report
+              </Text>
+              <Text fontSize="3xl" fontWeight="bold">
+                Your Impact This Week
+              </Text>
+              <Text color="gray.500" maxW="md" textAlign="center">
+                Great work! Here's a snapshot of your performance and improvements from last week.
+              </Text>
             </VStack>
+          </motion.div>
+        </Box>
 
-            <VStack spacing={4}>
-              <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.2, duration: 0.5 }}
-              >
-                <StatCard
-                  icon={MessageCircle}
-                  title="Messages Handled"
-                  value={stats.messagesHandled.value}
-                  subtitle={`${stats.messagesHandled.change} ${stats.messagesHandled.subtitle}`}
-                  color="#4299E1"
-                />
-              </motion.div>
-              
-              <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.3, duration: 0.5 }}
-              >
-                <StatCard
-                  icon={Clock}
-                  title="Average Response Time"
-                  value={stats.avgResponseTime.value}
-                  subtitle={`${stats.avgResponseTime.change} ${stats.avgResponseTime.subtitle}`}
-                  color="#48BB78"
-                />
-              </motion.div>
-              
-              <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.4, duration: 0.5 }}
-              >
-                <StatCard
-                  icon={Target}
-                  title="Resolution Rate"
-                  value={stats.resolutionRate.value}
-                  subtitle={`${stats.resolutionRate.change} ${stats.resolutionRate.subtitle}`}
-                  color="#9F7AEA"
-                />
-              </motion.div>
-              
-              <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.5, duration: 0.5 }}
-              >
-                <StatCard
-                  icon={Award}
-                  title="Customer Satisfaction"
-                  value={stats.customerSatisfaction.value}
-                  subtitle={`${stats.customerSatisfaction.change} ${stats.customerSatisfaction.subtitle}`}
-                  color="#ED8936"
-                />
-              </motion.div>
-            </VStack>
+        <ModalBody p={8}>
+          <VStack spacing={6}>
+            <Grid 
+              templateColumns="repeat(2, 1fr)" 
+              gap={6} 
+              w="full"
+            >
+              <StatCard
+                icon={MessageCircle}
+                title="Messages"
+                value={stats.messagesHandled.value}
+                change={stats.messagesHandled.change}
+                subtitle={stats.messagesHandled.subtitle}
+                color="#4299E1"
+                delay={0.2}
+              />
+              <StatCard
+                icon={Clock}
+                title="Response Time"
+                value={stats.avgResponseTime.value}
+                change={stats.avgResponseTime.change}
+                subtitle={stats.avgResponseTime.subtitle}
+                color="#48BB78"
+                delay={0.3}
+              />
+              <StatCard
+                icon={Target}
+                title="Resolution"
+                value={stats.resolutionRate.value}
+                change={stats.resolutionRate.change}
+                subtitle={stats.resolutionRate.subtitle}
+                color="#9F7AEA"
+                delay={0.4}
+              />
+              <StatCard
+                icon={Award}
+                title="Satisfaction"
+                value={stats.customerSatisfaction.value}
+                change={stats.customerSatisfaction.change}
+                subtitle={stats.customerSatisfaction.subtitle}
+                color="#ED8936"
+                delay={0.5}
+              />
+            </Grid>
+
+            <Divider />
 
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.6, duration: 0.5 }}
+              style={{ width: '100%' }}
             >
               <Button
-                colorScheme="blue"
                 size="lg"
                 w="full"
+                colorScheme="blue"
+                rightIcon={<ChevronRight />}
                 onClick={onClose}
-                rightIcon={<TrendingUp />}
+                py={7}
+                fontSize="md"
               >
-                Keep up the great work!
+                View Detailed Analytics
               </Button>
             </motion.div>
           </VStack>
@@ -210,4 +251,9 @@ export const WeeklyWrap = ({ demo = true }) => {
       </ModalContent>
     </Modal>
   );
+};
+
+const Grid = motion(Box);
+Grid.defaultProps = {
+  display: 'grid',
 };
