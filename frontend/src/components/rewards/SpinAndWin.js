@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Box, Button, Text, VStack, HStack, useColorModeValue, Badge, useToast } from '@chakra-ui/react';
-import { motion, useAnimation } from 'framer-motion';
+import { motion, AnimatePresence, useAnimation } from 'framer-motion';
 import { Gift, PartyPopper } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
