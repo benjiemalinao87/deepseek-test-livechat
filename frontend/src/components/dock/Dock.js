@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { HStack, Box, IconButton, Tooltip, useColorModeValue } from '@chakra-ui/react';
-import { MessageCircle, Users, GitBranch, Calendar, Phone, Wrench, Settings } from 'lucide-react';
+import { MessageCircle, Users, GitBranch, Calendar, Phone, Wrench, Settings, Trophy } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const DockIcon = ({ icon: Icon, label, onClick, isActive }) => {
@@ -55,6 +55,7 @@ export const Dock = ({ onItemClick, activeItem }) => {
     { id: 'pipelines', icon: GitBranch, label: 'Pipelines' },
     { id: 'calendar', icon: Calendar, label: 'Calendar' },
     { id: 'dialer', icon: Phone, label: 'Dialer' },
+    { id: 'rewards', icon: Trophy, label: 'Rewards' },
     { id: 'tools', icon: Wrench, label: 'Tools' },
     { id: 'settings', icon: Settings, label: 'Settings' },
   ];

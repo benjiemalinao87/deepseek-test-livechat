@@ -7,6 +7,7 @@ import { DraggableWindow } from './components/window/DraggableWindow';
 import { Pipeline } from './components/pipelines/Pipeline';
 import { Contacts } from './components/contacts/Contacts';
 import { CalendarContainer } from './components/calendar/CalendarContainer';
+import { RewardsWindow } from './components/rewards/RewardsWindow';
 
 // Placeholder components for other sections
 const PlaceholderView = ({ title }) => (
@@ -64,6 +65,19 @@ function App() {
           >
             <Box h="100%" overflow="hidden">
               <CalendarContainer />
+            </Box>
+          </DraggableWindow>
+        );
+      case 'rewards':
+        return (
+          <DraggableWindow
+            title="Rewards"
+            onClose={() => handleWindowClose('rewards')}
+            defaultPosition={{ x: 100, y: 50 }}
+            defaultSize={{ width: 1200, height: 800 }}
+          >
+            <Box h="100%" overflow="hidden">
+              <RewardsWindow onClose={() => handleWindowClose('rewards')} />
             </Box>
           </DraggableWindow>
         );
@@ -179,9 +193,23 @@ function App() {
             </DraggableWindow>
           )}
 
+          {/* Rewards Window */}
+          {activeWindows.includes('rewards') && (
+            <DraggableWindow
+              title="Rewards"
+              onClose={() => handleWindowClose('rewards')}
+              defaultPosition={{ x: 100, y: 50 }}
+              defaultSize={{ width: 1200, height: 800 }}
+            >
+              <Box h="100%" overflow="hidden">
+                <RewardsWindow onClose={() => handleWindowClose('rewards')} />
+              </Box>
+            </DraggableWindow>
+          )}
+
           {/* Other Windows */}
           {activeWindows
-            .filter(windowId => !['livechat', 'contacts', 'calendar', 'pipelines'].includes(windowId))
+            .filter(windowId => !['livechat', 'contacts', 'calendar', 'pipelines', 'rewards'].includes(windowId))
             .map((windowId, index) => (
               <DraggableWindow
                 key={windowId}
