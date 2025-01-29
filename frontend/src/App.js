@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { ChakraProvider, Box, useColorMode, IconButton, Center, Text } from '@chakra-ui/react';
 import { Moon, Sun } from 'lucide-react';
-import { TestChat } from './components/test/TestChat';
+import { TestChat } from './components/livechat/TestChat';
 import { Dock } from './components/dock/Dock';
 import { DraggableWindow } from './components/window/DraggableWindow';
 import { Pipeline } from './components/pipelines/Pipeline';
 import { Contacts } from './components/contacts/Contacts';
 import { CalendarContainer } from './components/calendar/CalendarContainer';
-import { RewardsWindow } from './components/rewards/RewardsWindow';
+import { RewardsWindow } from './components/windows/RewardsWindow';
+import { WeeklyWrap } from './components/stats/WeeklyWrap';
 
 // Placeholder components for other sections
 const PlaceholderView = ({ title }) => (
@@ -223,6 +224,7 @@ function App() {
 
           {/* Dock */}
           <Dock onItemClick={handleDockItemClick} activeItem={activeWindows[activeWindows.length - 1]} />
+          <WeeklyWrap />
         </Box>
       </Box>
     </ChakraProvider>
