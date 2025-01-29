@@ -17,7 +17,7 @@ import {
   Flex,
   Divider,
   Badge,
-  Grid,
+  SimpleGrid,
 } from '@chakra-ui/react';
 import { motion } from 'framer-motion';
 import { MessageCircle, Clock, Target, Award, TrendingUp, ArrowUp, ArrowDown, ChevronRight } from 'lucide-react';
@@ -90,6 +90,8 @@ const StatCard = ({ title, value, change, subtitle, icon: Icon, color, delay }) 
     </motion.div>
   );
 };
+
+const MotionSimpleGrid = motion(SimpleGrid);
 
 export const WeeklyWrap = ({ demo = true }) => {
   const { isOpen, onOpen, onClose } = useDisclosure();
@@ -183,10 +185,13 @@ export const WeeklyWrap = ({ demo = true }) => {
 
         <ModalBody p={8}>
           <VStack spacing={6}>
-            <Grid 
-              templateColumns="repeat(2, 1fr)" 
-              gap={6} 
+            <MotionSimpleGrid 
+              columns={2}
+              spacing={6}
               w="full"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5 }}
             >
               <StatCard
                 icon={MessageCircle}
@@ -224,7 +229,7 @@ export const WeeklyWrap = ({ demo = true }) => {
                 color="#ED8936"
                 delay={0.5}
               />
-            </Grid>
+            </MotionSimpleGrid>
 
             <Divider />
 
@@ -251,9 +256,4 @@ export const WeeklyWrap = ({ demo = true }) => {
       </ModalContent>
     </Modal>
   );
-};
-
-const Grid = motion(Box);
-Grid.defaultProps = {
-  display: 'grid',
 };
