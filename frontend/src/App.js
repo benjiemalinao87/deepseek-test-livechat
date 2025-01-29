@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ChakraProvider, Box, useColorMode, IconButton, Center, Text } from '@chakra-ui/react';
 import { Moon, Sun } from 'lucide-react';
-import { TestChat } from './components/livechat/TestChat';
+import { LiveChat } from './components/livechat/livechat';
 import { Dock } from './components/dock/Dock';
 import { DraggableWindow } from './components/window/DraggableWindow';
 import { Pipeline } from './components/pipelines/Pipeline';
@@ -159,7 +159,7 @@ function App() {
 
           {/* LiveChat Window */}
           {activeWindows.includes('livechat') && (
-            <TestChat 
+            <LiveChat 
               isDark={isDark} 
               onClose={() => handleWindowClose('livechat')}
               selectedContact={selectedContact}
