@@ -33,6 +33,7 @@ const StatCard = ({ title, value, subtitle, icon: Icon, color }) => {
         boxShadow="lg"
         border="1px solid"
         borderColor={color}
+        _hover={{ transform: 'translateY(-2px)', transition: 'all 0.2s' }}
       >
         <VStack spacing={3} align="start">
           <HStack spacing={2}>
@@ -51,28 +52,33 @@ const StatCard = ({ title, value, subtitle, icon: Icon, color }) => {
   );
 };
 
-export const WeeklyWrap = () => {
+export const WeeklyWrap = ({ demo = true }) => {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [stats, setStats] = useState(null);
   const bgColor = useColorModeValue('gray.50', 'gray.900');
 
   useEffect(() => {
-    // Check if it's Monday and if the wrap hasn't been shown this week
+    // For demo, show immediately
+    if (demo) {
+      fetchWeeklyStats();
+      onOpen();
+      return;
+    }
+
+    // Normal Monday check for production
     const today = new Date();
     const lastShown = localStorage.getItem('lastWeeklyWrapShown');
     const isMonday = today.getDay() === 1;
     
     if (isMonday && (!lastShown || new Date(lastShown).getDate() !== today.getDate())) {
-      // Fetch last week's stats
       fetchWeeklyStats();
       onOpen();
       localStorage.setItem('lastWeeklyWrapShown', today.toISOString());
     }
-  }, []);
+  }, [demo, onOpen]);
 
   const fetchWeeklyStats = () => {
-    // This would be replaced with actual API call
-    // Simulating data for now
+    // Simulated data for demo
     setStats({
       messagesHandled: {
         value: '324',
@@ -100,63 +106,105 @@ export const WeeklyWrap = () => {
   if (!stats) return null;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} size="xl">
+    <Modal 
+      isOpen={isOpen} 
+      onClose={onClose} 
+      size="xl"
+      motionPreset="slideInBottom"
+    >
       <ModalOverlay backdropFilter="blur(10px)" />
       <ModalContent bg={bgColor} p={6}>
         <ModalCloseButton />
         <ModalBody>
           <VStack spacing={8} align="stretch">
             <VStack spacing={2} textAlign="center">
-              <Text fontSize="3xl" fontWeight="bold">
-                Your Weekly Wrap
-              </Text>
-              <Text color="gray.500">
-                Here's how you performed last week
-              </Text>
+              <motion.div
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+              >
+                <Text fontSize="3xl" fontWeight="bold">
+                  Your Weekly Wrap
+                </Text>
+                <Text color="gray.500">
+                  Here's how you performed last week
+                </Text>
+              </motion.div>
             </VStack>
 
             <VStack spacing={4}>
-              <StatCard
-                icon={MessageCircle}
-                title="Messages Handled"
-                value={stats.messagesHandled.value}
-                subtitle={`${stats.messagesHandled.change} ${stats.messagesHandled.subtitle}`}
-                color="#4299E1"
-              />
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.2, duration: 0.5 }}
+              >
+                <StatCard
+                  icon={MessageCircle}
+                  title="Messages Handled"
+                  value={stats.messagesHandled.value}
+                  subtitle={`${stats.messagesHandled.change} ${stats.messagesHandled.subtitle}`}
+                  color="#4299E1"
+                />
+              </motion.div>
               
-              <StatCard
-                icon={Clock}
-                title="Average Response Time"
-                value={stats.avgResponseTime.value}
-                subtitle={`${stats.avgResponseTime.change} ${stats.avgResponseTime.subtitle}`}
-                color="#48BB78"
-              />
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.3, duration: 0.5 }}
+              >
+                <StatCard
+                  icon={Clock}
+                  title="Average Response Time"
+                  value={stats.avgResponseTime.value}
+                  subtitle={`${stats.avgResponseTime.change} ${stats.avgResponseTime.subtitle}`}
+                  color="#48BB78"
+                />
+              </motion.div>
               
-              <StatCard
-                icon={Target}
-                title="Resolution Rate"
-                value={stats.resolutionRate.value}
-                subtitle={`${stats.resolutionRate.change} ${stats.resolutionRate.subtitle}`}
-                color="#9F7AEA"
-              />
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.4, duration: 0.5 }}
+              >
+                <StatCard
+                  icon={Target}
+                  title="Resolution Rate"
+                  value={stats.resolutionRate.value}
+                  subtitle={`${stats.resolutionRate.change} ${stats.resolutionRate.subtitle}`}
+                  color="#9F7AEA"
+                />
+              </motion.div>
               
-              <StatCard
-                icon={Award}
-                title="Customer Satisfaction"
-                value={stats.customerSatisfaction.value}
-                subtitle={`${stats.customerSatisfaction.change} ${stats.customerSatisfaction.subtitle}`}
-                color="#ED8936"
-              />
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.5, duration: 0.5 }}
+              >
+                <StatCard
+                  icon={Award}
+                  title="Customer Satisfaction"
+                  value={stats.customerSatisfaction.value}
+                  subtitle={`${stats.customerSatisfaction.change} ${stats.customerSatisfaction.subtitle}`}
+                  color="#ED8936"
+                />
+              </motion.div>
             </VStack>
 
-            <Button
-              colorScheme="blue"
-              size="lg"
-              onClick={onClose}
-              rightIcon={<TrendingUp />}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.6, duration: 0.5 }}
             >
-              Keep up the great work!
-            </Button>
+              <Button
+                colorScheme="blue"
+                size="lg"
+                w="full"
+                onClick={onClose}
+                rightIcon={<TrendingUp />}
+              >
+                Keep up the great work!
+              </Button>
+            </motion.div>
           </VStack>
         </ModalBody>
       </ModalContent>
