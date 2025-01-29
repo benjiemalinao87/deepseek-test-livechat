@@ -29,9 +29,10 @@ import {
   PopoverContent,
   PopoverBody,
   useDisclosure,
+  Tooltip
 } from '@chakra-ui/react';
 import { CirclePicker } from 'react-color';
-import { Plus, Tag, Calendar, Briefcase } from 'lucide-react';
+import { Tag, CalendarDays, Briefcase, Gift, Clock, Users, Plus } from 'lucide-react';
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
 
@@ -96,27 +97,24 @@ const AddContactModal = ({ isOpen, onClose }) => {
   };
 
   const handleSubmit = () => {
-    // Validate required field
     if (!formData.phone) {
       alert('Phone number is required');
       return;
     }
-    
-    // TODO: Handle form submission
     console.log('Form data:', formData);
     onClose();
   };
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} size="xl">
-      <ModalOverlay />
-      <ModalContent bg={bgColor} borderRadius="xl" shadow="xl">
-        <ModalHeader borderBottomWidth="1px" borderColor={borderColor}>
-          New Contact
+      <ModalOverlay backdropFilter="blur(10px)" />
+      <ModalContent bg={bgColor} borderRadius="2xl" shadow="xl">
+        <ModalHeader borderBottomWidth="1px" borderColor={borderColor} py={4}>
+          <Text fontSize="lg" fontWeight="medium">New Contact</Text>
         </ModalHeader>
         <ModalCloseButton />
         <ModalBody py={6}>
-          <Tabs onChange={setActiveTab} variant="enclosed">
+          <Tabs onChange={setActiveTab} variant="soft-rounded" colorScheme="gray">
             <TabList mb={4}>
               <Tab>Basic Info</Tab>
               <Tab>Additional</Tab>
@@ -126,40 +124,44 @@ const AddContactModal = ({ isOpen, onClose }) => {
                 <VStack spacing={4}>
                   <HStack w="100%" spacing={4}>
                     <FormControl>
-                      <FormLabel>First Name</FormLabel>
+                      <FormLabel fontSize="sm">First Name</FormLabel>
                       <Input 
                         name="firstName"
                         value={formData.firstName}
                         onChange={handleInputChange}
                         placeholder="First name"
+                        size="md"
                       />
                     </FormControl>
                     <FormControl>
-                      <FormLabel>Last Name</FormLabel>
+                      <FormLabel fontSize="sm">Last Name</FormLabel>
                       <Input 
                         name="lastName"
                         value={formData.lastName}
                         onChange={handleInputChange}
                         placeholder="Last name"
+                        size="md"
                       />
                     </FormControl>
                   </HStack>
                   <FormControl isRequired>
-                    <FormLabel>Phone</FormLabel>
+                    <FormLabel fontSize="sm">Phone</FormLabel>
                     <Input 
                       name="phone"
                       value={formData.phone}
                       onChange={handleInputChange}
                       placeholder="Phone number"
+                      size="md"
                     />
                   </FormControl>
                   <FormControl>
-                    <FormLabel>Email</FormLabel>
+                    <FormLabel fontSize="sm">Email</FormLabel>
                     <Input 
                       name="email"
                       value={formData.email}
                       onChange={handleInputChange}
                       placeholder="Email address"
+                      size="md"
                     />
                   </FormControl>
                 </VStack>
@@ -167,12 +169,13 @@ const AddContactModal = ({ isOpen, onClose }) => {
               <TabPanel>
                 <VStack spacing={4}>
                   <FormControl>
-                    <FormLabel>Lead Source</FormLabel>
+                    <FormLabel fontSize="sm">Lead Source</FormLabel>
                     <Select 
                       name="leadSource"
                       value={formData.leadSource}
                       onChange={handleInputChange}
                       placeholder="Select lead source"
+                      size="md"
                     >
                       <option value="website">Website</option>
                       <option value="referral">Referral</option>
@@ -181,12 +184,13 @@ const AddContactModal = ({ isOpen, onClose }) => {
                     </Select>
                   </FormControl>
                   <FormControl>
-                    <FormLabel>Market</FormLabel>
+                    <FormLabel fontSize="sm">Market</FormLabel>
                     <Select 
                       name="market"
                       value={formData.market}
                       onChange={handleInputChange}
                       placeholder="Select market"
+                      size="md"
                     >
                       <option value="enterprise">Enterprise</option>
                       <option value="smb">SMB</option>
@@ -194,12 +198,13 @@ const AddContactModal = ({ isOpen, onClose }) => {
                     </Select>
                   </FormControl>
                   <FormControl>
-                    <FormLabel>Product</FormLabel>
+                    <FormLabel fontSize="sm">Product</FormLabel>
                     <Select 
                       name="product"
                       value={formData.product}
                       onChange={handleInputChange}
                       placeholder="Select product"
+                      size="md"
                     >
                       <option value="product1">Product 1</option>
                       <option value="product2">Product 2</option>
@@ -212,55 +217,35 @@ const AddContactModal = ({ isOpen, onClose }) => {
           </Tabs>
 
           <Box mt={6} borderTopWidth="1px" borderColor={borderColor} pt={4}>
-            <HStack spacing={4}>
-              <Popover
-                isOpen={labelPopover.isOpen}
-                onClose={labelPopover.onClose}
-              >
-                <PopoverTrigger>
-                  <IconButton
-                    icon={<Tag size={18} />}
-                    variant="ghost"
-                    aria-label="Add label"
-                    onClick={labelPopover.onOpen}
-                  />
-                </PopoverTrigger>
-                <PopoverContent p={4}>
-                  <PopoverBody>
-                    <VStack spacing={3}>
-                      <Input
-                        placeholder="Label name"
-                        value={labelName}
-                        onChange={(e) => setLabelName(e.target.value)}
-                      />
-                      <CirclePicker
-                        color={selectedColor}
-                        onChangeComplete={(color) => setSelectedColor(color.hex)}
-                      />
-                      <Button size="sm" onClick={handleAddLabel}>
-                        Add Label
-                      </Button>
-                    </VStack>
-                  </PopoverBody>
-                </PopoverContent>
-              </Popover>
+            <HStack spacing={2}>
+              <Tooltip label="Add Label" hasArrow>
+                <IconButton
+                  icon={<Tag size={16} />}
+                  variant="ghost"
+                  size="sm"
+                  onClick={labelPopover.onOpen}
+                />
+              </Tooltip>
 
-              <IconButton
-                icon={<Briefcase size={18} />}
-                variant="ghost"
-                aria-label="Add opportunity"
-                onClick={() => setActiveTab(2)}
-              />
+              <Tooltip label="Add Opportunity" hasArrow>
+                <IconButton
+                  icon={<Briefcase size={16} />}
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setActiveTab(2)}
+                />
+              </Tooltip>
 
-              <IconButton
-                icon={<Calendar size={18} />}
-                variant="ghost"
-                aria-label="Add appointment"
-                onClick={() => setActiveTab(3)}
-              />
+              <Tooltip label="Schedule Appointment" hasArrow>
+                <IconButton
+                  icon={<CalendarDays size={16} />}
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setActiveTab(3)}
+                />
+              </Tooltip>
             </HStack>
 
-            {/* Display Labels */}
             <Flex wrap="wrap" gap={2} mt={4}>
               {formData.labels.map((label, index) => (
                 <Badge
@@ -275,6 +260,33 @@ const AddContactModal = ({ isOpen, onClose }) => {
                 </Badge>
               ))}
             </Flex>
+
+            <Popover
+              isOpen={labelPopover.isOpen}
+              onClose={labelPopover.onClose}
+              placement="bottom-start"
+            >
+              <PopoverContent p={4} w="250px">
+                <PopoverBody>
+                  <VStack spacing={3}>
+                    <Input
+                      placeholder="Label name"
+                      value={labelName}
+                      onChange={(e) => setLabelName(e.target.value)}
+                      size="sm"
+                    />
+                    <CirclePicker
+                      color={selectedColor}
+                      onChangeComplete={(color) => setSelectedColor(color.hex)}
+                      width="100%"
+                    />
+                    <Button size="sm" width="100%" onClick={handleAddLabel}>
+                      Add Label
+                    </Button>
+                  </VStack>
+                </PopoverBody>
+              </PopoverContent>
+            </Popover>
           </Box>
 
           <Button
@@ -282,6 +294,8 @@ const AddContactModal = ({ isOpen, onClose }) => {
             colorScheme="blue"
             w="100%"
             onClick={handleSubmit}
+            size="md"
+            fontWeight="medium"
           >
             Add Contact
           </Button>
