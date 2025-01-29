@@ -1,0 +1,40 @@
+
+
+this is a texting app using twilio.
+
+
+- refer to @README.md and @progress.md for solving the inbound and outbound text.
+- stay consistent with the design of like Mac OS design philosophy. 
+- do not create file if already existed.
+- as much as possible for better integration with all part of the app, seperate each part of the UI in seperate file.
+- create a new file called lessons_learn.md log there what you learn about fixing the bug. always log there after successful debugging. log it without me asking
+- once completed a feature please update @progress.md what what changes or features being done and check of @roadmap.md
+
+
+# Error Fixing
+- Consider multiple possible causes before deciding. Do not jump to conclusions
+- Explain the problem in plain English
+- Make minimal necessary changes, changing as few lines of code as possible
+- Always verify the fix
+- In case of strange errors, ask the user to perform a web search to find the latest up-to-date information
+
+# Building Process
+- Understand requirements completely before starting
+- Plan the next steps in detail
+- Use an @README.md file to define the following:
+  1. Project Overview: Purpose of the project and a summary of its goals
+  2. Core Functionalities: A breakdown of what the app should do
+  3. Docs and Libraries: Documentation or tools that will be referenced
+  4. Current File Structure: A snapshot of existing files to provide clarity
+5. once finish building the feature, if it is succesully, update the file progress.md, if not exist, please create it.
+
+Write each step in the process as simple and precise prompts.
+Test each functionality after implementation.
+
+# Automatically update documentation files after each significant change:
+- progress.md: Track completed features and improvements
+- lessons_learn.md: Document technical insights and solutions
+- roadmap.md: Update progress and adjust future plans
+- instructions.md: Maintain project overview and requirements
+
+

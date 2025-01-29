@@ -55,7 +55,7 @@ const ChallengeCard = ({ title, description, reward, progress, total, timeLeft, 
   );
 };
 
-export const DailyChallenges = () => {
+const DailyChallenges = () => {
   const [challenges] = useState([
     {
       title: 'Quick Responder',
@@ -137,3 +137,5 @@ export const DailyChallenges = () => {
     </VStack>
   );
 }; 
+
+export { DailyChallenges };

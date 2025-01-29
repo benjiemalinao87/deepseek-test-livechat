@@ -4,7 +4,7 @@ import { motion, AnimatePresence, useAnimation } from 'framer-motion';
 import { Gift, PartyPopper } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
-export const SpinAndWin = () => {
+const SpinAndWin = () => {
   const [isSpinning, setIsSpinning] = useState(false);
   const [canSpin, setCanSpin] = useState(true);
   const [currentReward, setCurrentReward] = useState(null);
@@ -252,4 +252,6 @@ export const SpinAndWin = () => {
       )}
     </VStack>
   );
-}; 
+};
+
+export { SpinAndWin };
