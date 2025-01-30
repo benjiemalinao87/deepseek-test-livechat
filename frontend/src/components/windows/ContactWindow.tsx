@@ -1,20 +1,47 @@
 import React, { useCallback, useState, useEffect } from 'react';
-import { DockWindow } from '../dock/DockWindow';
-import { Box, Button, VStack, useDisclosure, useToast, Text, Input } from '@chakra-ui/react';
+import { DraggableWindow } from '../window/DraggableWindow';
+import { 
+  Box, 
+  Button, 
+  VStack, 
+  useDisclosure, 
+  useToast, 
+  Text, 
+  Input,
+  Grid,
+  GridItem,
+  useColorModeValue
+} from '@chakra-ui/react';
 import { ContactForm } from '../chat/ContactForm';
 
-export function ContactWindow() {
-  const { isOpen, onOpen, onClose } = useDisclosure();
+export function ContactWindow({ onClose }) {
   const toast = useToast();
   const [contacts, setContacts] = useState([]);
   const [testPhone, setTestPhone] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const { isOpen, onOpen: openForm, onClose: closeForm } = useDisclosure();
+
+  // Colors
+  const bg = useColorModeValue('white', 'gray.800');
+  const borderColor = useColorModeValue('gray.200', 'gray.700');
 
   // Load contacts from localStorage on mount
   useEffect(() => {
     const savedContacts = localStorage.getItem('contacts');
     if (savedContacts) {
       setContacts(JSON.parse(savedContacts));
+    } else {
+      // Add hardcoded contact
+      const hardcodedContact = {
+        id: Date.now(),
+        firstName: 'Benjie',
+        lastName: 'Malinao',
+        phoneNumber: '16267888830',
+        email: 'benjie@gmail.com',
+        leadSource: 'homebuddy'
+      };
+      setContacts([hardcodedContact]);
+      localStorage.setItem('contacts', JSON.stringify([hardcodedContact]));
     }
   }, []);
 
@@ -40,7 +67,7 @@ export function ContactWindow() {
         isClosable: true,
       });
       
-      onClose();
+      closeForm();
     } catch (error) {
       toast({
         title: "Error adding contact",
@@ -50,7 +77,7 @@ export function ContactWindow() {
         isClosable: true,
       });
     }
-  }, [contacts, toast, onClose]);
+  }, [contacts, closeForm, toast]);
 
   const handleTestSMS = async () => {
     setIsLoading(true);
@@ -91,45 +118,81 @@ export function ContactWindow() {
   };
 
   return (
-    <DockWindow title="Contacts">
-      <VStack spacing={4} align="stretch" p={4}>
-        <Button colorScheme="blue" onClick={onOpen}>
-          Add Contact
-        </Button>
+    <DraggableWindow
+      title="Contacts"
+      onClose={onClose}
+      defaultSize={{ width: 1000, height: 600 }}
+      minSize={{ width: 600, height: 400 }}
+    >
+      <Grid
+        templateColumns="250px 1fr"
+        h="100%"
+        bg={bg}
+      >
+        {/* Left Sidebar */}
+        <GridItem borderRight="1px" borderColor={borderColor} p={4}>
+          <VStack spacing={4} align="stretch">
+            <Button colorScheme="purple" onClick={openForm}>
+              Add New Contact
+            </Button>
+            <Input
+              placeholder="Test Phone Number"
+              value={testPhone}
+              onChange={(e) => setTestPhone(e.target.value)}
+            />
+            <Button
+              colorScheme="green"
+              onClick={handleTestSMS}
+              isLoading={isLoading}
+              width="100%"
+            >
+              Send Test SMS
+            </Button>
+          </VStack>
+        </GridItem>
 
-        {/* SMS Test Section */}
-        <Box p={4} borderWidth={1} borderRadius="md">
-          <Text mb={2} fontWeight="bold">Test SMS</Text>
-          <Input
-            placeholder="Enter phone number"
-            value={testPhone}
-            onChange={(e) => setTestPhone(e.target.value)}
-            mb={2}
-          />
-          <Button
-            colorScheme="green"
-            onClick={handleTestSMS}
-            isLoading={isLoading}
-            width="100%"
-          >
-            Send Test SMS
-          </Button>
-        </Box>
+        {/* Main Content */}
+        <GridItem p={4} overflowY="auto">
+          {contacts.length === 0 ? (
+            <VStack spacing={4} justify="center" h="100%">
+              <Text color="gray.500">No contacts yet</Text>
+              <Button colorScheme="purple" variant="outline" onClick={openForm}>
+                Add Your First Contact
+              </Button>
+            </VStack>
+          ) : (
+            <VStack spacing={4} align="stretch">
+              {contacts.map((contact) => (
+                <Box
+                  key={contact.id}
+                  p={4}
+                  borderWidth="1px"
+                  borderRadius="md"
+                  _hover={{ bg: useColorModeValue('gray.50', 'gray.700') }}
+                >
+                  <Text fontWeight="bold">
+                    {contact.firstName} {contact.lastName}
+                  </Text>
+                  <Text color="gray.500">{contact.phoneNumber}</Text>
+                  {contact.email && <Text color="gray.500">{contact.email}</Text>}
+                  {contact.leadSource && (
+                    <Text color="gray.500">Source: {contact.leadSource}</Text>
+                  )}
+                </Box>
+              ))}
+            </VStack>
+          )}
+        </GridItem>
+      </Grid>
 
-        {/* Contact List */}
-        {contacts.map(contact => (
-          <Box key={contact.id} p={3} borderWidth={1} borderRadius="md">
-            <Text>{contact.firstName} {contact.lastName}</Text>
-            <Text color="gray.600">{contact.phoneNumber}</Text>
-          </Box>
-        ))}
-
+      {/* Contact Form Modal */}
+      {isOpen && (
         <ContactForm
           isOpen={isOpen}
-          onClose={onClose}
-          onAddContact={handleAddContact}
+          onClose={closeForm}
+          onSubmit={handleAddContact}
         />
-      </VStack>
-    </DockWindow>
+      )}
+    </DraggableWindow>
   );
 }

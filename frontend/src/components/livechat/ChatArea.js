@@ -197,23 +197,23 @@ const ChatArea = ({
                       justify={isOutbound ? 'flex-end' : 'flex-start'}
                     >
                       <Box
-                        maxW="70%"
-                        bg={isOutbound ? 'purple.500' : 'gray.100'}
-                        color={isOutbound ? 'white' : 'gray.800'}
+                        bg={message.direction === 'inbound' ? 'gray.100' : 'blue.500'}
+                        color={message.direction === 'inbound' ? 'black' : 'white'}
                         px={4}
                         py={2}
                         borderRadius="lg"
+                        maxW="70%"
                         position="relative"
                       >
                         <Text>{message.message}</Text>
-                        <Text
-                          fontSize="xs"
-                          color={isOutbound ? 'whiteAlpha.800' : 'gray.500'}
-                          textAlign={isOutbound ? 'right' : 'left'}
-                          mt={1}
-                        >
-                          {time}
-                        </Text>
+                        <HStack spacing={1} position="absolute" right="-60px" bottom="0" opacity={0.7} fontSize="xs">
+                          <Text>{formatTime(message.timestamp)}</Text>
+                          {message.direction === 'outbound' && (
+                            <Text color={message.status === 'pending' ? 'yellow.500' : 'green.500'}>
+                              {message.status === 'pending' ? '⋯' : '✓'}
+                            </Text>
+                          )}
+                        </HStack>
                       </Box>
                     </Flex>
                   );

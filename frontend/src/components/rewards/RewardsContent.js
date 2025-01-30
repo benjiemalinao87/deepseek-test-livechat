@@ -98,54 +98,56 @@ export const RewardsContent = () => {
   const selectedTabBg = useColorModeValue('white', 'gray.800');
 
   return (
-    <Box p={4}>
-      <Tabs variant="soft-rounded" colorScheme="blue">
-        <TabList bg={tabBg} p={2} borderRadius="full" mb={4}>
-          <Tab
-            _selected={{ bg: selectedTabBg }}
-            borderRadius="full"
-            mx={1}
-          >
-            Overview
-          </Tab>
-          <Tab
-            _selected={{ bg: selectedTabBg }}
-            borderRadius="full"
-            mx={1}
-          >
-            Leaderboard
-          </Tab>
-          <Tab
-            _selected={{ bg: selectedTabBg }}
-            borderRadius="full"
-            mx={1}
-          >
-            Challenges
-          </Tab>
-          <Tab
-            _selected={{ bg: selectedTabBg }}
-            borderRadius="full"
-            mx={1}
-          >
-            Spin
-          </Tab>
-        </TabList>
+    <Tabs variant="soft-rounded" colorScheme="blue" h="100%">
+      <TabList bg={tabBg} borderRadius="full" p={1} mx={4} mt={2} mb={4}>
+        <Tab 
+          _selected={{ bg: selectedTabBg }} 
+          borderRadius="full"
+          mx={1}
+          fontSize="sm"
+        >
+          Overview
+        </Tab>
+        <Tab 
+          _selected={{ bg: selectedTabBg }} 
+          borderRadius="full"
+          mx={1}
+          fontSize="sm"
+        >
+          Leaderboard
+        </Tab>
+        <Tab 
+          _selected={{ bg: selectedTabBg }} 
+          borderRadius="full"
+          mx={1}
+          fontSize="sm"
+        >
+          Challenges
+        </Tab>
+        <Tab 
+          _selected={{ bg: selectedTabBg }} 
+          borderRadius="full"
+          mx={1}
+          fontSize="sm"
+        >
+          Spin
+        </Tab>
+      </TabList>
 
-        <TabPanels>
-          <TabPanel>
-            <Overview />
-          </TabPanel>
-          <TabPanel>
-            <Leaderboard />
-          </TabPanel>
-          <TabPanel>
-            <DailyChallenges />
-          </TabPanel>
-          <TabPanel>
-            <SpinAndWin />
-          </TabPanel>
-        </TabPanels>
-      </Tabs>
-    </Box>
+      <TabPanels h="calc(100% - 60px)" overflowY="auto">
+        <TabPanel h="100%">
+          <Overview />
+        </TabPanel>
+        <TabPanel h="100%">
+          <Leaderboard />
+        </TabPanel>
+        <TabPanel h="100%">
+          <DailyChallenges />
+        </TabPanel>
+        <TabPanel h="100%">
+          <SpinAndWin />
+        </TabPanel>
+      </TabPanels>
+    </Tabs>
   );
 };

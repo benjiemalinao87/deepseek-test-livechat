@@ -4,7 +4,7 @@ import { create } from 'zustand';
  * Global contact state management
  * Ensures consistency between Contact and LiveChat views
  */
-const useContactStore = create((set) => ({
+const useContactStore = create((set, get) => ({
   contacts: [
     {
       id: 1,
@@ -17,6 +17,7 @@ const useContactStore = create((set) => ({
       labels: ['VIP', 'Enterprise'],
       lastMessage: null,
       lastMessageTime: null,
+      unreadCount: 0
     }
   ],
 
@@ -40,11 +41,50 @@ const useContactStore = create((set) => ({
       contact.id === id ? {
         ...contact,
         lastMessage: message,
-        lastMessageTime: timestamp
+        lastMessageTime: timestamp,
+        unreadCount: contact.unreadCount || 0
       } : contact
     )
   })),
   
+  // Increment unread count
+  incrementUnreadCount: (id) => {
+    set((state) => ({
+      contacts: state.contacts.map(contact =>
+        contact.id === id && contact.conversationStatus === 'Open' ? {
+          ...contact,
+          unreadCount: (contact.unreadCount || 0) + 1
+        } : contact
+      )
+    }));
+  },
+
+  // Clear unread count
+  clearUnreadCount: (id) => {
+    set((state) => ({
+      contacts: state.contacts.map(contact =>
+        contact.id === id ? {
+          ...contact,
+          unreadCount: 0
+        } : contact
+      )
+    }));
+  },
+
+  // Update conversation status
+  updateConversationStatus: (id, status) => {
+    set((state) => ({
+      contacts: state.contacts.map(contact =>
+        contact.id === id ? {
+          ...contact,
+          conversationStatus: status,
+          // Clear unread count when moving to Done or Pending
+          unreadCount: (status === 'Done' || status === 'Pending') ? 0 : contact.unreadCount
+        } : contact
+      )
+    }));
+  },
+
   // Set filter
   setFilter: (filter) => set({ currentFilter: filter }),
   

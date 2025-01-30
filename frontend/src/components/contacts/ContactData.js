@@ -2,14 +2,13 @@ export const demoContacts = [
   {
     id: 1,
     name: 'Benjie Malinao',
-    email: 'sarah.j@example.com',
+    email: 'benjie@gmail.com',
     phone: '+16267888830',
-    company: 'Tech Solutions Inc.',
-    position: 'Marketing Director',
+    leadSource: 'homebuddy',
     status: 'active',
     tags: ['VIP', 'Enterprise'],
     lastContact: '2 days ago',
-    notes: 'Interested in premium package',
+    notes: '',
     avatar: null
   },
   {

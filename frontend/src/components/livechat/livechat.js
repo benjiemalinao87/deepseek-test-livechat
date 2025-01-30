@@ -32,7 +32,10 @@ const LiveChat = ({ isDark, onClose, selectedContact: initialSelectedContact }) 
     setFilter,
     updateContact,
     updateLastMessage,
-    getFilteredContacts
+    getFilteredContacts,
+    incrementUnreadCount,
+    clearUnreadCount,
+    updateConversationStatus
   } = useContactStore();
 
   // Local state
@@ -98,6 +101,7 @@ const LiveChat = ({ isDark, onClose, selectedContact: initialSelectedContact }) 
   // Handle new incoming message
   const handleNewMessage = (data) => {
     const { from, message, timestamp } = data;
+    
     setMessages(prev => {
       const isDuplicate = prev.some(m => 
         m.messageSid === data.messageSid || 
@@ -108,12 +112,21 @@ const LiveChat = ({ isDark, onClose, selectedContact: initialSelectedContact }) 
       return [...prev, data];
     });
     
-    // Update contact's last message and status
+    // Update contact's last message and increment unread count for inbound messages
     const contact = contacts.find(c => c.phone === from);
     if (contact) {
       updateLastMessage(contact.id, message, timestamp);
-      if (contact.conversationStatus !== 'Open') {
-        updateContact(contact.id, { conversationStatus: 'Open' });
+      if (data.direction === 'inbound') {
+        // Only increment unread count if the contact is not the selected one
+        if (!selectedContact || selectedContact.id !== contact.id) {
+          incrementUnreadCount(contact.id);
+        }
+        // Set conversation status to Open for inbound messages
+        if (contact.conversationStatus !== 'Open' && 
+            contact.conversationStatus !== 'Spam' && 
+            contact.conversationStatus !== 'Invalid') {
+          updateConversationStatus(contact.id, 'Open');
+        }
       }
     }
 
@@ -129,6 +142,13 @@ const LiveChat = ({ isDark, onClose, selectedContact: initialSelectedContact }) 
     }
   };
 
+  // Clear unread count when selecting a contact
+  useEffect(() => {
+    if (selectedContact) {
+      clearUnreadCount(selectedContact.id);
+    }
+  }, [selectedContact, clearUnreadCount]);
+
   // Handle sending message
   const handleSendMessage = async (message, to) => {
     if (!socket.current?.connected || !message || !to) {
@@ -143,6 +163,19 @@ const LiveChat = ({ isDark, onClose, selectedContact: initialSelectedContact }) 
     }
 
     try {
+      // Create outbound message object
+      const outboundMessage = {
+        from: '+13256665486', // Your Twilio number
+        to: to,
+        message: message.trim(),
+        timestamp: new Date().toISOString(),
+        direction: 'outbound',
+        status: 'pending'
+      };
+
+      // Add message to state immediately for better UX
+      setMessages(prev => [...prev, outboundMessage]);
+
       // Send message using HTTP endpoint
       const response = await fetch('https://cc.automate8.com/send-sms', {
         method: 'POST',
@@ -155,13 +188,36 @@ const LiveChat = ({ isDark, onClose, selectedContact: initialSelectedContact }) 
         }),
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to send message');
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Failed to send message');
       }
 
-      // No toast notification for successful send
-      
+      // Update the message with the server response
+      setMessages(prev => prev.map(msg => {
+        if (msg === outboundMessage) {
+          return {
+            ...msg,
+            messageSid: data.messageSid,
+            status: data.status || 'sent'
+          };
+        }
+        return msg;
+      }));
+
+      // Update contact's last message
+      const contact = contacts.find(c => c.phone === to);
+      if (contact) {
+        updateLastMessage(contact.id, message, outboundMessage.timestamp);
+      }
+
     } catch (error) {
+      console.error('Error sending message:', error);
+      
+      // Remove the pending message from state
+      setMessages(prev => prev.filter(msg => msg.status !== 'pending'));
+      
       toast({
         title: 'Error sending message',
         description: error.message,

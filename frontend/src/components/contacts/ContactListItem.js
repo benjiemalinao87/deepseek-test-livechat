@@ -11,7 +11,7 @@ import {
   MenuList,
   MenuItem,
   IconButton,
-  useDisclosure,
+  Circle,
 } from '@chakra-ui/react';
 import { MessageCircle, ExternalLink, Phone, MoreVertical } from 'lucide-react';
 import { QuickMessage } from './QuickMessage';
@@ -37,39 +37,113 @@ const StatusBadge = ({ status }) => {
   );
 };
 
-export const ContactListItem = ({ contact, onOpenLiveChat }) => {
-  const { name, title, company, status, tags = [] } = contact;
+export const ContactListItem = ({ 
+  contact, 
+  onOpenLiveChat,
+  isSelected, 
+  onClick, 
+  isDark 
+}) => {
+  const bgColor = isSelected 
+    ? isDark ? 'gray.700' : 'gray.100'
+    : 'transparent';
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'Open': return 'green';
+      case 'Pending': return 'yellow';
+      case 'Done': return 'gray';
+      case 'Spam': return 'red';
+      case 'Invalid': return 'purple';
+      default: return 'gray';
+    }
+  };
+
+  const { name, email, phone, status, leadSource, tags = [], unreadCount } = contact;
   const { isOpen, onOpen, onClose } = useDisclosure();
 
   return (
     <Box
-      p={4}
-      borderWidth="1px"
-      borderRadius="lg"
-      _hover={{ bg: 'gray.50' }}
-      _dark={{ _hover: { bg: 'gray.800' } }}
-      transition="all 0.2s"
+      p={3}
+      cursor="pointer"
+      bg={bgColor}
+      _hover={{ bg: isDark ? 'gray.700' : 'gray.100' }}
+      borderRadius="md"
+      onClick={onClick}
       position="relative"
     >
-      <HStack spacing={4}>
+      <HStack spacing={3} align="flex-start">
         <Avatar
+          size="sm"
           name={name}
-          size="md"
-          bg="blue.500"
-          color="white"
+          bg="purple.500"
         />
-        
-        <VStack align="start" spacing={1} flex={1}>
-          <HStack width="full">
-            <Text fontWeight="medium">{name}</Text>
-            <StatusBadge status={status} />
+        <VStack align="flex-start" flex={1} spacing={1}>
+          <HStack width="100%" justify="space-between">
+            <Text fontWeight="bold" fontSize="sm">
+              {name}
+            </Text>
+            <HStack spacing={2}>
+              {/* Unread message count indicator */}
+              {unreadCount > 0 && status === 'Open' && (
+                <Circle 
+                  size="18px" 
+                  bg="green.500" 
+                  color="white" 
+                  fontSize="xs"
+                  fontWeight="bold"
+                >
+                  {unreadCount}
+                </Circle>
+              )}
+              <Badge 
+                colorScheme={getStatusColor(status)}
+                variant="subtle"
+                fontSize="xs"
+              >
+                {status}
+              </Badge>
+              <Menu>
+                <MenuButton
+                  as={IconButton}
+                  icon={<MoreVertical />}
+                  variant="ghost"
+                  size="sm"
+                  aria-label="More options"
+                  onClick={(e) => e.stopPropagation()}
+                />
+                <MenuList>
+                  <MenuItem 
+                    icon={<ExternalLink size={16} />} 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onOpenLiveChat(contact);
+                    }}
+                  >
+                    Open in LiveChat
+                  </MenuItem>
+                  <MenuItem 
+                    icon={<MessageCircle size={16} />} 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onOpen();
+                    }}
+                  >
+                    Quick Message
+                  </MenuItem>
+                </MenuList>
+              </Menu>
+            </HStack>
           </HStack>
-          
-          <Text fontSize="sm" color="gray.600" _dark={{ color: 'gray.400' }}>
-            {title} at {company}
+          <Text fontSize="xs" color="gray.500" noOfLines={1}>
+            {email} • {phone}
           </Text>
-          
           <HStack spacing={2}>
+            {leadSource && (
+              <Badge colorScheme="purple" variant="subtle" fontSize="xs">
+                {leadSource}
+              </Badge>
+            )}
             {tags.map((tag) => (
               <Badge
                 key={tag}
@@ -82,54 +156,7 @@ export const ContactListItem = ({ contact, onOpenLiveChat }) => {
             ))}
           </HStack>
         </VStack>
-
-        <HStack spacing={2}>
-          <Menu>
-            <MenuButton
-              as={IconButton}
-              icon={<MessageCircle size={20} />}
-              variant="ghost"
-              colorScheme="blue"
-              aria-label="Message options"
-              size="sm"
-              _hover={{ bg: 'blue.50' }}
-              _dark={{ _hover: { bg: 'blue.900' } }}
-            />
-            <MenuList>
-              <MenuItem 
-                icon={<ExternalLink size={16} />} 
-                onClick={() => onOpenLiveChat(contact)}
-                _hover={{ bg: 'blue.50' }}
-                _dark={{ _hover: { bg: 'blue.900' } }}
-              >
-                Open in LiveChat
-              </MenuItem>
-              <MenuItem 
-                icon={<MessageCircle size={16} />} 
-                onClick={onOpen}
-                _hover={{ bg: 'blue.50' }}
-                _dark={{ _hover: { bg: 'blue.900' } }}
-              >
-                Quick Message
-              </MenuItem>
-            </MenuList>
-          </Menu>
-          <IconButton
-            icon={<Phone size={20} />}
-            variant="ghost"
-            colorScheme="green"
-            aria-label="Call contact"
-            size="sm"
-          />
-          <IconButton
-            icon={<MoreVertical size={20} />}
-            variant="ghost"
-            aria-label="More options"
-            size="sm"
-          />
-        </HStack>
       </HStack>
-      
       {isOpen && (
         <QuickMessage 
           contact={contact}
