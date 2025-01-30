@@ -74,22 +74,26 @@ const LiveChat = ({ isDark, onClose, selectedContact: initialSelectedContact }) 
   useEffect(() => {
     if (initialSelectedContact) {
       const existingContact = contacts.find(c => c.phone === initialSelectedContact.phone);
-      if (!existingContact) {
+      if (existingContact) {
+        setSelectedContact(existingContact);
+      } else {
         // Add the contact if it doesn't exist
         const newContactData = {
           id: contacts.length + 1,
           name: initialSelectedContact.name,
           phone: initialSelectedContact.phone,
+          email: initialSelectedContact.email,
+          leadSource: initialSelectedContact.leadSource,
           avatar: initialSelectedContact.name.split(' ').map(n => n[0]).join('').toUpperCase(),
           lastMessage: initialSelectedContact.lastMessage || 'No messages yet',
           time: initialSelectedContact.time || 'Just now',
           conversationStatus: 'Open'
         };
         updateContact(newContactData.id, newContactData);
+        setSelectedContact(newContactData);
       }
-      setSelectedContact(initialSelectedContact);
     }
-  }, [initialSelectedContact]);
+  }, [initialSelectedContact, contacts]);
 
   // Handle new incoming message
   const handleNewMessage = (data) => {

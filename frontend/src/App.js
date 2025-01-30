@@ -153,7 +153,12 @@ function App() {
               defaultPosition={{ x: 100, y: 50 }}
               defaultSize={{ width: 800, height: 600 }}
             >
-              <Contacts />
+              <Contacts onOpenLiveChat={(contact) => {
+                if (!activeWindows.includes('livechat')) {
+                  setActiveWindows([...activeWindows, 'livechat']);
+                }
+                setSelectedContact(contact);
+              }} />
             </DraggableWindow>
           )}
 
@@ -196,16 +201,7 @@ function App() {
 
           {/* Rewards Window */}
           {activeWindows.includes('rewards') && (
-            <DraggableWindow
-              title="Rewards"
-              onClose={() => handleWindowClose('rewards')}
-              defaultPosition={{ x: 100, y: 50 }}
-              defaultSize={{ width: 1200, height: 800 }}
-            >
-              <Box h="100%" overflow="hidden">
-                <RewardsWindow onClose={() => handleWindowClose('rewards')} />
-              </Box>
-            </DraggableWindow>
+            <RewardsWindow onClose={() => handleWindowClose('rewards')} />
           )}
 
           {/* Other Windows */}
