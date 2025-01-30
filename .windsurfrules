@@ -2,6 +2,8 @@
 
 this is a texting app using twilio.
 
+what you should write in @lessons_learn.md any lessons learned when you successfully fix the issue. do not use this to log progress and roadmap. there is @progress.md for that. and roadmap in @roadmap.md.
+
 
 - refer to @README.md and @progress.md for solving the inbound and outbound text.
 - stay consistent with the design of like Mac OS design philosophy. 

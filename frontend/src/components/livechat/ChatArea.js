@@ -18,7 +18,7 @@ import {
 import { BsThreeDotsVertical } from 'react-icons/bs';
 import { IoSend } from 'react-icons/io5';
 
-export const ChatArea = ({ 
+const ChatArea = ({ 
   selectedContact, 
   messages = [], 
   onSendMessage,
@@ -188,18 +188,18 @@ export const ChatArea = ({
 
               <VStack spacing={4} align="stretch">
                 {groupMessages.map((message, index) => {
-                  const isOutbound = message.from === selectedContact.phone;
+                  const isOutbound = message.direction === 'outbound';
                   const time = formatTime(message.timestamp);
 
                   return (
                     <Flex
                       key={index}
-                      justify={isOutbound ? 'flex-start' : 'flex-end'}
+                      justify={isOutbound ? 'flex-end' : 'flex-start'}
                     >
                       <Box
                         maxW="70%"
-                        bg={isOutbound ? 'gray.100' : 'purple.500'}
-                        color={isOutbound ? textColor : 'white'}
+                        bg={isOutbound ? 'purple.500' : 'gray.100'}
+                        color={isOutbound ? 'white' : 'gray.800'}
                         px={4}
                         py={2}
                         borderRadius="lg"
@@ -208,8 +208,8 @@ export const ChatArea = ({
                         <Text>{message.message}</Text>
                         <Text
                           fontSize="xs"
-                          color={isOutbound ? mutedTextColor : 'whiteAlpha.800'}
-                          textAlign="right"
+                          color={isOutbound ? 'whiteAlpha.800' : 'gray.500'}
+                          textAlign={isOutbound ? 'right' : 'left'}
                           mt={1}
                         >
                           {time}
@@ -262,3 +262,5 @@ export const ChatArea = ({
     </Flex>
   );
 };
+
+export { ChatArea };

@@ -21,9 +21,9 @@ import {
 import { SearchIcon, BellIcon, ChevronDownIcon, AddIcon } from '@chakra-ui/icons';
 import { BsThreeDotsVertical } from 'react-icons/bs';
 
-export const ContactList = ({
+const ContactList = ({
   contacts,
-  selectedPhone,
+  selectedContact,
   onSelectContact,
   onAddContact,
   messages,
@@ -153,7 +153,7 @@ export const ContactList = ({
         <VStack spacing={0} align="stretch">
           {filteredContacts.map((contact) => {
             const lastMessage = getLastMessage(contact.phone);
-            const isSelected = selectedPhone === contact.phone;
+            const isSelected = selectedContact === contact;
             
             return (
               <Box
@@ -162,7 +162,7 @@ export const ContactList = ({
                 cursor="pointer"
                 bg={isSelected ? hoverBg : 'transparent'}
                 _hover={{ bg: hoverBg }}
-                onClick={() => onSelectContact(contact.phone)}
+                onClick={() => onSelectContact(contact)}
                 borderBottom="1px"
                 borderColor={borderColor}
               >
@@ -200,3 +200,5 @@ export const ContactList = ({
     </Box>
   );
 };
+
+export { ContactList };

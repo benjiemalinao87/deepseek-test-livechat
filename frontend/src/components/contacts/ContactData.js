@@ -1,9 +1,9 @@
 export const demoContacts = [
   {
     id: 1,
-    name: 'Sarah Johnson',
+    name: 'Benjie Malinao',
     email: 'sarah.j@example.com',
-    phone: '+1 (555) 123-4567',
+    phone: '+16267888830',
     company: 'Tech Solutions Inc.',
     position: 'Marketing Director',
     status: 'active',

@@ -1,47 +1,46 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   HStack,
   VStack,
   Text,
-  Avatar,
   Badge,
+  Avatar,
+  useColorModeValue,
   IconButton,
   Menu,
   MenuButton,
   MenuList,
   MenuItem,
-  useColorModeValue,
-  Tooltip,
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+  PopoverArrow,
+  PopoverCloseButton,
+  PopoverHeader,
+  PopoverBody,
 } from '@chakra-ui/react';
-import { MessageCircle, Phone, Mail, MoreVertical } from 'lucide-react';
+import { MessageCircle } from 'lucide-react';
+import { QuickMessage } from './QuickMessage';
 
-const StatusBadge = ({ status }) => {
-  const statusColors = {
-    active: 'green',
-    busy: 'red',
-    away: 'yellow',
-    offline: 'gray'
-  };
-
-  return (
-    <Badge
-      colorScheme={statusColors[status?.toLowerCase()] || 'gray'}
-      variant="subtle"
-      size="sm"
-      fontSize="xs"
-      textTransform="capitalize"
-    >
-      {status || 'Unknown'}
-    </Badge>
-  );
-};
-
-export const ContactCard = ({ contact }) => {
+/**
+ * ContactCard Component
+ * 
+ * Displays contact information and provides messaging options:
+ * 1. Open in LiveChat - Opens the full LiveChat interface
+ * 2. Quick Message - Opens a popup for sending a quick message
+ * 
+ * @param {Object} contact - Contact information object
+ * @param {Function} onOpenLiveChat - Callback to open LiveChat with the contact
+ */
+export const ContactCard = ({ contact, onOpenLiveChat }) => {
+  const [isQuickMessageOpen, setIsQuickMessageOpen] = useState(false);
+  
   const cardBg = useColorModeValue('white', 'gray.800');
   const borderColor = useColorModeValue('gray.200', 'gray.700');
   const textColor = useColorModeValue('gray.800', 'white');
   const mutedColor = useColorModeValue('gray.600', 'gray.400');
+  const menuBg = useColorModeValue('white', 'gray.700');
 
   // Define label colors
   const labelColors = {
@@ -51,6 +50,24 @@ export const ContactCard = ({ contact }) => {
     enterprise: 'blue',
     technical: 'cyan',
     default: 'blue'
+  };
+
+  /**
+   * Handle opening LiveChat with the current contact
+   * Uses existing LiveChat logic for Twilio integration
+   */
+  const handleOpenLiveChat = () => {
+    if (onOpenLiveChat) {
+      onOpenLiveChat(contact);
+    }
+  };
+
+  /**
+   * Toggle the QuickMessage popup
+   * QuickMessage component handles its own Twilio integration
+   */
+  const handleToggleQuickMessage = () => {
+    setIsQuickMessageOpen(!isQuickMessageOpen);
   };
 
   return (
@@ -75,7 +92,14 @@ export const ContactCard = ({ contact }) => {
             <Text fontSize="sm" fontWeight="medium" color={textColor}>
               {contact.name}
             </Text>
-            <StatusBadge status={contact.status} />
+            <Badge colorScheme={
+              contact.status === 'Active' ? 'green' :
+              contact.status === 'Busy' ? 'red' :
+              contact.status === 'Away' ? 'yellow' :
+              'gray'
+            }>
+              {contact.status}
+            </Badge>
           </HStack>
           
           <Text fontSize="xs" color={mutedColor}>
@@ -96,51 +120,34 @@ export const ContactCard = ({ contact }) => {
           </HStack>
         </VStack>
 
-        <HStack spacing={1} className="actions" opacity={0.7}>
-          <Tooltip label="Send Message">
-            <IconButton
-              icon={<MessageCircle size={14} />}
-              size="xs"
-              variant="ghost"
-              colorScheme="blue"
-              aria-label="Send message"
-            />
-          </Tooltip>
-          <Tooltip label="Call">
-            <IconButton
-              icon={<Phone size={14} />}
-              size="xs"
-              variant="ghost"
-              colorScheme="blue"
-              aria-label="Call"
-            />
-          </Tooltip>
-          <Tooltip label="Email">
-            <IconButton
-              icon={<Mail size={14} />}
-              size="xs"
-              variant="ghost"
-              colorScheme="blue"
-              aria-label="Email"
-            />
-          </Tooltip>
-          
-          <Menu>
-            <MenuButton
-              as={IconButton}
-              icon={<MoreVertical size={14} />}
-              variant="ghost"
-              size="xs"
-              aria-label="More options"
-            />
-            <MenuList>
-              <MenuItem>Edit Contact</MenuItem>
-              <MenuItem>Delete Contact</MenuItem>
-              <MenuItem>Add to Group</MenuItem>
-            </MenuList>
-          </Menu>
-        </HStack>
+        {/* Message Actions Menu */}
+        <Menu>
+          <MenuButton
+            as={IconButton}
+            icon={<MessageCircle size={18} />}
+            variant="ghost"
+            size="sm"
+            aria-label="Send Message"
+            className="actions"
+            opacity={0.6}
+          />
+          <MenuList bg={menuBg}>
+            <MenuItem onClick={handleOpenLiveChat}>
+              Open in LiveChat
+            </MenuItem>
+            <MenuItem onClick={handleToggleQuickMessage}>
+              Send Quick Message
+            </MenuItem>
+          </MenuList>
+        </Menu>
       </HStack>
+
+      {/* Quick Message Popup */}
+      <QuickMessage
+        isOpen={isQuickMessageOpen}
+        onClose={() => setIsQuickMessageOpen(false)}
+        contact={contact}
+      />
     </Box>
   );
 };

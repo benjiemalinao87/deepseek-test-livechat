@@ -1,106 +1,76 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  Box, 
-  useToast, 
-  useColorMode, 
-  useColorModeValue, 
-  Grid, 
+import {
+  Box,
+  Grid,
   GridItem,
   HStack,
   IconButton,
   Text,
-  Spacer
+  useColorModeValue,
+  useToast
 } from '@chakra-ui/react';
-import { socket } from '../../socket';
-import { ContactList } from './ContactList';
-import { ChatArea } from './ChatArea';
-import { UserDetails } from './UserDetails';
-import { AddContactModal } from '../contacts/AddContactModal';
-import { StatusMenu } from './StatusMenu';
 import { X, Minus, Square } from 'lucide-react';
+import useContactStore from '../../services/contactState';
+import io from 'socket.io-client';
+import { ChatArea } from './ChatArea';
+import { ContactList } from './ContactList';
+import { UserDetails } from './UserDetails';
+import { StatusMenu } from './StatusMenu';
 import Draggable from 'react-draggable';
 
+/**
+ * LiveChat Component
+ * 
+ * Main chat interface that shows filtered contacts based on conversation status
+ * and handles real-time messaging through Socket.IO
+ */
 const LiveChat = ({ isDark, onClose, selectedContact: initialSelectedContact }) => {
-  const [selectedPhone, setSelectedPhone] = useState(null);
+  // Use shared contact state
+  const { 
+    contacts,
+    currentFilter,
+    setFilter,
+    updateContact,
+    updateLastMessage,
+    getFilteredContacts
+  } = useContactStore();
+
+  // Local state
+  const [selectedContact, setSelectedContact] = useState(null);
   const [messages, setMessages] = useState([]);
-  const [contacts, setContacts] = useState([
-    { id: 1, name: 'Test User', phone: '+16267888830', time: '2m ago', status: 'Open' },
-    { id: 2, name: 'Test User2', phone: '+16267888831', time: '1m ago', status: 'Done' },
-    { id: 3, name: 'Test User3', phone: '+16267888832', time: 'Just now', status: 'Pending' },
-  ]);
-  const [isAddContactModalOpen, setIsAddContactModalOpen] = useState(false);
-  const [newContact, setNewContact] = useState({
-    firstName: '',
-    lastName: '',
-    phone: '',
-    email: '',
-    leadSource: '',
-    market: '',
-    product: ''
-  });
   const [isConnected, setIsConnected] = useState(false);
   const [windowSize, setWindowSize] = useState({ width: 800, height: 600 });
   const [isResizing, setIsResizing] = useState(false);
   const resizeRef = useRef(null);
   const containerRef = useRef(null);
 
-  const bg = useColorModeValue('whiteAlpha.800', 'blackAlpha.700');
-  const borderColor = useColorModeValue('whiteAlpha.300', 'whiteAlpha.100');
-  const headerBg = useColorModeValue('whiteAlpha.500', 'blackAlpha.400');
-  const textColor = useColorModeValue('gray.800', 'white');
-  const toast = useToast();
+  // Socket.IO connection
+  const socket = useRef(null);
 
-  // Socket.IO Event Handlers
+  // Set default filter to 'Open' for LiveChat
   useEffect(() => {
-    const handleConnect = () => {
-      console.log('✅ Connected to socket');
-      setIsConnected(true);
-    };
+    setFilter('Open');
+  }, []);
 
-    const handleDisconnect = () => {
-      console.log('❌ Disconnected from socket');
-      setIsConnected(false);
-    };
+  // Initialize Socket.IO connection
+  useEffect(() => {
+    socket.current = io('https://cc.automate8.com', {
+      transports: ['websocket'],
+      upgrade: false
+    });
 
-    const handleNewMessage = (data) => {
-      console.log('📥 Received message:', data);
-      if (!data || !data.message) {
-        console.warn('⚠️ Invalid message data:', data);
-        return;
-      }
-
-      setMessages(prev => {
-        const isDuplicate = prev.some(m => 
-          m.messageSid === data.messageSid || 
-          (m.timestamp === data.timestamp && m.message === data.message)
-        );
-        
-        if (isDuplicate) return prev;
-        return [...prev, data];
-      });
-
-      if (data.direction === 'inbound') {
-        toast({
-          title: 'New Message',
-          description: `From: ${data.from}\n${data.message}`,
-          status: 'info',
-          duration: 3000,
-        });
-      }
-    };
-
-    socket.on('connect', handleConnect);
-    socket.on('disconnect', handleDisconnect);
-    socket.on('new_message', handleNewMessage);
+    socket.current.on('connect', handleConnect);
+    socket.current.on('disconnect', handleDisconnect);
+    socket.current.on('new_message', handleNewMessage);
 
     return () => {
-      socket.off('connect', handleConnect);
-      socket.off('disconnect', handleDisconnect);
-      socket.off('new_message', handleNewMessage);
+      if (socket.current) {
+        socket.current.disconnect();
+      }
     };
-  }, [toast]);
+  }, []);
 
-  // Add effect to handle initialSelectedContact changes
+  // Handle initial selected contact
   useEffect(() => {
     if (initialSelectedContact) {
       const existingContact = contacts.find(c => c.phone === initialSelectedContact.phone);
@@ -113,52 +83,50 @@ const LiveChat = ({ isDark, onClose, selectedContact: initialSelectedContact }) 
           avatar: initialSelectedContact.name.split(' ').map(n => n[0]).join('').toUpperCase(),
           lastMessage: initialSelectedContact.lastMessage || 'No messages yet',
           time: initialSelectedContact.time || 'Just now',
-          status: 'Open'
+          conversationStatus: 'Open'
         };
-        setContacts(prev => [...prev, newContactData]);
+        updateContact(newContactData.id, newContactData);
       }
-      setSelectedPhone(initialSelectedContact.phone);
+      setSelectedContact(initialSelectedContact);
     }
   }, [initialSelectedContact]);
 
-  const handleMouseDown = (e) => {
-    if (e.target === resizeRef.current) {
-      setIsResizing(true);
-      e.preventDefault();
-      e.stopPropagation();
-    }
-  };
-
-  const handleMouseMove = (e) => {
-    if (!isResizing || !containerRef.current) return;
-
-    const container = containerRef.current.getBoundingClientRect();
-    const newWidth = Math.max(800, e.clientX - container.left);
-    const newHeight = Math.max(600, e.clientY - container.top);
-    
-    setWindowSize({
-      width: newWidth,
-      height: newHeight
+  // Handle new incoming message
+  const handleNewMessage = (data) => {
+    const { from, message, timestamp } = data;
+    setMessages(prev => {
+      const isDuplicate = prev.some(m => 
+        m.messageSid === data.messageSid || 
+        (m.timestamp === timestamp && m.message === message)
+      );
+      
+      if (isDuplicate) return prev;
+      return [...prev, data];
     });
-  };
-
-  const handleMouseUp = () => {
-    setIsResizing(false);
-  };
-
-  useEffect(() => {
-    if (isResizing) {
-      window.addEventListener('mousemove', handleMouseMove);
-      window.addEventListener('mouseup', handleMouseUp);
+    
+    // Update contact's last message and status
+    const contact = contacts.find(c => c.phone === from);
+    if (contact) {
+      updateLastMessage(contact.id, message, timestamp);
+      if (contact.conversationStatus !== 'Open') {
+        updateContact(contact.id, { conversationStatus: 'Open' });
+      }
     }
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [isResizing]);
 
+    // Show toast notification for new messages
+    if (data.direction === 'inbound') {
+      toast({
+        title: 'New Message',
+        description: `From: ${from}\n${message}`,
+        status: 'info',
+        duration: 3000,
+      });
+    }
+  };
+
+  // Handle sending message
   const handleSendMessage = async (message, to) => {
-    if (!message || !to) {
+    if (!socket.current?.connected || !message || !to) {
       toast({
         title: 'Error',
         description: 'Please enter both phone number and message',
@@ -169,11 +137,6 @@ const LiveChat = ({ isDark, onClose, selectedContact: initialSelectedContact }) 
     }
 
     try {
-      console.log('📤 Sending message:', {
-        to: to,
-        message: message
-      });
-
       // Send message using HTTP endpoint
       const response = await fetch('https://cc.automate8.com/send-sms', {
         method: 'POST',
@@ -211,6 +174,12 @@ const LiveChat = ({ isDark, onClose, selectedContact: initialSelectedContact }) 
           return [...prev, outboundMessage];
         });
 
+        // Update contact's last message
+        const contact = contacts.find(c => c.phone === to);
+        if (contact) {
+          updateLastMessage(contact.id, message, outboundMessage.timestamp);
+        }
+
         toast({
           title: 'Message sent',
           status: 'success',
@@ -230,160 +199,77 @@ const LiveChat = ({ isDark, onClose, selectedContact: initialSelectedContact }) 
     }
   };
 
-  const handleAddContact = async (contactData) => {
-    try {
-      // Create the contact
-      const contact = {
-        id: contacts.length + 1,
-        name: `${contactData.firstName} ${contactData.lastName}`.trim(),
-        phone: contactData.phone,
-        email: contactData.email,
-        leadSource: contactData.leadSource,
-        market: contactData.market,
-        product: contactData.product,
-        labels: contactData.labels || [],
-        time: 'Just now',
-        status: 'Open'
-      };
-      
-      setContacts(prev => [...prev, contact]);
-      setIsAddContactModalOpen(false);
-      setNewContact({
-        firstName: '',
-        lastName: '',
-        phone: '',
-        email: '',
-        leadSource: '',
-        market: '',
-        product: ''
-      });
+  // Socket event handlers
+  const handleConnect = () => setIsConnected(true);
+  const handleDisconnect = () => setIsConnected(false);
 
-      toast({
-        title: 'Contact Added',
-        description: `${contact.name} has been added to your contacts`,
-        status: 'success',
-        duration: 3000,
-      });
+  // Window resize handlers
+  const handleMouseDown = (e) => {
+    e.preventDefault(); // Prevent text selection
+    setIsResizing(true);
+    resizeRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      startWidth: windowSize.width,
+      startHeight: windowSize.height
+    };
 
-      return contact;
-    } catch (error) {
-      console.error('Error adding contact:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to add contact. Please try again.',
-        status: 'error',
-        duration: 3000,
+    // Add window-level event listeners
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  };
+
+  const handleMouseUp = (e) => {
+    if (!isResizing) return;
+    
+    setIsResizing(false);
+    resizeRef.current = null;
+
+    // Remove window-level event listeners
+    document.removeEventListener('mousemove', handleMouseMove);
+    document.removeEventListener('mouseup', handleMouseUp);
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isResizing || !resizeRef.current) return;
+
+    e.preventDefault(); // Prevent text selection while resizing
+    const deltaX = e.clientX - resizeRef.current.startX;
+    const deltaY = e.clientY - resizeRef.current.startY;
+
+    requestAnimationFrame(() => {
+      setWindowSize({
+        width: Math.max(600, resizeRef.current.startWidth + deltaX),
+        height: Math.max(400, resizeRef.current.startHeight + deltaY)
       });
-      throw error;
+    });
+  };
+
+  // Cleanup event listeners on unmount
+  useEffect(() => {
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, []); // Empty dependency array since we're just cleaning up
+
+  const bg = useColorModeValue('whiteAlpha.800', 'blackAlpha.700');
+  const borderColor = useColorModeValue('whiteAlpha.300', 'whiteAlpha.100');
+  const headerBg = useColorModeValue('whiteAlpha.500', 'blackAlpha.400');
+  const textColor = useColorModeValue('gray.800', 'white');
+  const toast = useToast();
+
+  // Normalize phone number by removing non-digit characters and ensuring it starts with country code
+  const normalizePhone = (phone) => {
+    if (!phone) return '';
+    // Remove all non-digit characters
+    const digits = phone.replace(/\D/g, '');
+    // If it doesn't start with +1 or 1, add it
+    if (!digits.startsWith('1')) {
+      return '1' + digits;
     }
+    return digits;
   };
-
-  const handleCreateOpportunity = async (opportunity) => {
-    try {
-      // Add opportunity to pipeline
-      const pipelineCard = {
-        id: `card-${Date.now()}`,
-        name: opportunity.contactName,
-        phone: opportunity.contactPhone,
-        lastMessage: opportunity.title,
-        time: 'Just now',
-        priority: 'high',
-        type: 'opportunity',
-        value: opportunity.value,
-        service: opportunity.service,
-        stage: opportunity.stage,
-        notes: opportunity.notes
-      };
-
-      // Update pipeline data
-      setContacts(prev => prev.map(contact => 
-        contact.phone === opportunity.contactPhone 
-          ? { ...contact, labels: [...(contact.labels || []), 'opportunity'] }
-          : contact
-      ));
-
-      toast({
-        title: 'Opportunity Created',
-        description: `New opportunity added to pipeline: ${opportunity.title}`,
-        status: 'success',
-        duration: 3000,
-      });
-    } catch (error) {
-      console.error('Error creating opportunity:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to create opportunity. Please try again.',
-        status: 'error',
-        duration: 3000,
-      });
-    }
-  };
-
-  const handleScheduleAppointment = async (appointment) => {
-    try {
-      // Add appointment to calendar
-      const calendarEvent = {
-        id: appointment.id,
-        title: `${appointment.type} with ${appointment.contactName}`,
-        start: `${appointment.date}T${appointment.time}`,
-        end: `${appointment.date}T${appointment.time.split(':')[0]}:${
-          parseInt(appointment.time.split(':')[1]) + 30
-        }`,
-        description: appointment.notes,
-        type: appointment.type,
-        contactId: appointment.contactId,
-        contactName: appointment.contactName,
-        contactPhone: appointment.contactPhone
-      };
-
-      // TODO: Update calendar component with new event
-      console.log('Calendar event created:', calendarEvent);
-
-      // Add to pipeline as well
-      const pipelineCard = {
-        id: `card-${Date.now()}`,
-        name: appointment.contactName,
-        phone: appointment.contactPhone,
-        lastMessage: `${appointment.type} scheduled for ${appointment.date} at ${appointment.time}`,
-        time: 'Just now',
-        priority: 'medium',
-        type: 'appointment',
-        appointmentDetails: appointment
-      };
-
-      // Update pipeline data
-      setContacts(prev => prev.map(contact => 
-        contact.phone === appointment.contactPhone 
-          ? { ...contact, labels: [...(contact.labels || []), 'appointment'] }
-          : contact
-      ));
-
-      toast({
-        title: 'Appointment Scheduled',
-        description: `${appointment.type} scheduled with ${appointment.contactName}`,
-        status: 'success',
-        duration: 3000,
-      });
-    } catch (error) {
-      console.error('Error scheduling appointment:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to schedule appointment. Please try again.',
-        status: 'error',
-        duration: 3000,
-      });
-    }
-  };
-
-  const handleStatusChange = (newStatus) => {
-    setContacts(contacts.map(contact => 
-      contact.phone === selectedPhone 
-        ? { ...contact, status: newStatus }
-        : contact
-    ));
-  };
-
-  const currentContact = contacts.find(c => c.phone === selectedPhone);
 
   return (
     <Draggable
@@ -398,16 +284,13 @@ const LiveChat = ({ isDark, onClose, selectedContact: initialSelectedContact }) 
     >
       <Box
         ref={containerRef}
-        width={`${windowSize.width}px`}
-        height={`${windowSize.height}px`}
         bg={bg}
-        position="absolute"
-        borderRadius="lg"
+        rounded="lg"
+        shadow="lg"
         overflow="hidden"
-        boxShadow="xl"
-        border="1px solid"
-        borderColor={borderColor}
-        backdropFilter="blur(10px)"
+        w={`${windowSize.width}px`}
+        h={`${windowSize.height}px`}
+        position="absolute"
       >
         {/* Window Title Bar */}
         <HStack
@@ -453,10 +336,10 @@ const LiveChat = ({ isDark, onClose, selectedContact: initialSelectedContact }) 
             <Text fontSize="sm" fontWeight="medium" color={textColor}>
               Live Chat
             </Text>
-            {currentContact && (
+            {selectedContact && (
               <StatusMenu 
-                currentStatus={currentContact.status} 
-                onStatusChange={handleStatusChange} 
+                currentStatus={selectedContact.conversationStatus} 
+                onStatusChange={(newStatus) => updateContact(selectedContact.id, { conversationStatus: newStatus })} 
               />
             )}
           </HStack>
@@ -472,34 +355,35 @@ const LiveChat = ({ isDark, onClose, selectedContact: initialSelectedContact }) 
           >
             <GridItem borderRight="1px" borderColor={borderColor} overflow="hidden">
               <ContactList
-                contacts={contacts}
-                selectedPhone={selectedPhone}
-                onSelectContact={setSelectedPhone}
-                onAddContact={() => setIsAddContactModalOpen(true)}
+                contacts={getFilteredContacts()}
+                selectedContact={selectedContact}
+                onSelectContact={setSelectedContact}
                 messages={messages}
                 isDark={isDark}
               />
             </GridItem>
             <GridItem overflow="hidden">
               <ChatArea
-                selectedContact={currentContact}
-                messages={messages.filter(
-                  m => m.to === selectedPhone || m.from === selectedPhone
-                )}
+                selectedContact={selectedContact}
+                messages={messages.filter(msg => {
+                  const normalizedFrom = normalizePhone(msg.from);
+                  const normalizedTo = normalizePhone(msg.to);
+                  const normalizedContact = normalizePhone(selectedContact?.phone);
+                  return normalizedFrom === normalizedContact || normalizedTo === normalizedContact;
+                })}
                 onSendMessage={handleSendMessage}
-                socket={socket}
+                socket={socket.current}
                 isDark={isDark}
               />
             </GridItem>
             <GridItem borderLeft="1px" borderColor={borderColor} overflow="hidden">
-              <UserDetails selectedContact={currentContact} />
+              <UserDetails selectedContact={selectedContact} />
             </GridItem>
           </Grid>
         </Box>
 
         {/* Resize Handle */}
         <Box
-          ref={resizeRef}
           position="absolute"
           bottom={2}
           right={2}
@@ -533,16 +417,6 @@ const LiveChat = ({ isDark, onClose, selectedContact: initialSelectedContact }) 
             bg: 'white',
             transform: 'rotate(-45deg)'
           }}
-        />
-
-        <AddContactModal 
-          isOpen={isAddContactModalOpen}
-          onClose={() => setIsAddContactModalOpen(false)}
-          onNewContactChange={setNewContact}
-          onAddContact={handleAddContact}
-          onCreateOpportunity={handleCreateOpportunity}
-          onScheduleAppointment={handleScheduleAppointment}
-          newContact={newContact}
         />
       </Box>
     </Draggable>

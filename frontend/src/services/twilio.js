@@ -1,6 +1,10 @@
+/**
+ * Send a message using Twilio
+ * Endpoint: https://cc.automate8.com/send-sms
+ */
 export const sendTwilioMessage = async ({ to, message }) => {
   try {
-    const response = await fetch('/api/messages', {
+    const response = await fetch('https://cc.automate8.com/send-sms', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

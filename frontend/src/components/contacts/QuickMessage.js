@@ -1,30 +1,51 @@
 import React, { useState } from 'react';
 import {
-  Popover,
-  PopoverTrigger,
-  PopoverContent,
-  PopoverBody,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalFooter,
+  ModalBody,
+  ModalCloseButton,
+  Button,
+  Textarea,
   VStack,
-  HStack,
-  Input,
-  IconButton,
   Text,
-  Box,
   useToast,
+  useColorModeValue,
 } from '@chakra-ui/react';
-import { Send, X } from 'lucide-react';
 import { sendTwilioMessage } from '../../services/twilio';
 
-export const QuickMessage = ({ contact, isOpen, onClose }) => {
+/**
+ * QuickMessage Component
+ * 
+ * A popup component for sending quick messages to contacts.
+ * Uses the existing Twilio integration for message sending.
+ * 
+ * @param {Object} props
+ * @param {boolean} props.isOpen - Controls modal visibility
+ * @param {function} props.onClose - Callback to close the modal
+ * @param {Object} props.contact - Contact to send message to
+ */
+export const QuickMessage = ({ isOpen, onClose, contact }) => {
   const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
   const toast = useToast();
 
+  // Color modes
+  const bg = useColorModeValue('white', 'gray.800');
+  const borderColor = useColorModeValue('gray.200', 'gray.700');
+
+  /**
+   * Handles sending the message via Twilio
+   * Uses the same Twilio service as LiveChat
+   */
   const handleSendMessage = async () => {
     if (!message.trim()) return;
-    
+
     setIsSending(true);
     try {
+      // Use existing Twilio service
       await sendTwilioMessage({
         to: contact.phone,
         message: message.trim(),
@@ -32,7 +53,7 @@ export const QuickMessage = ({ contact, isOpen, onClose }) => {
 
       toast({
         title: 'Message sent',
-        description: `Message sent to ${contact.name}`,
+        description: 'Your message has been sent successfully',
         status: 'success',
         duration: 3000,
       });
@@ -40,9 +61,10 @@ export const QuickMessage = ({ contact, isOpen, onClose }) => {
       setMessage('');
       onClose();
     } catch (error) {
+      console.error('Error sending message:', error);
       toast({
         title: 'Error sending message',
-        description: error.message || 'Please try again',
+        description: error.message || 'Failed to send message',
         status: 'error',
         duration: 5000,
       });
@@ -51,81 +73,46 @@ export const QuickMessage = ({ contact, isOpen, onClose }) => {
     }
   };
 
-  const handleKeyPress = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
-    }
-  };
-
   return (
-    <Popover
-      isOpen={isOpen}
-      onClose={onClose}
-      placement="right"
-      closeOnBlur={false}
-    >
-      <PopoverContent
-        width="300px"
-        boxShadow="xl"
-        border="1px solid"
-        borderColor="gray.200"
-        _dark={{ borderColor: 'gray.600' }}
-        borderRadius="xl"
-        position="absolute"
-        right="0"
-        top="0"
-      >
-        <PopoverBody p={4}>
-          <VStack spacing={3} align="stretch">
-            <HStack justify="space-between" align="center">
-              <Text fontSize="sm" fontWeight="medium">
-                Message to {contact.name}
-              </Text>
-              <IconButton
-                icon={<X size={14} />}
-                size="xs"
-                variant="ghost"
-                onClick={onClose}
-                aria-label="Close"
-                _hover={{ bg: 'red.50', color: 'red.500' }}
-                _dark={{ _hover: { bg: 'red.900', color: 'red.300' } }}
-              />
-            </HStack>
+    <Modal isOpen={isOpen} onClose={onClose} size="md">
+      <ModalOverlay />
+      <ModalContent bg={bg} borderColor={borderColor}>
+        <ModalHeader>Quick Message</ModalHeader>
+        <ModalCloseButton />
+        
+        <ModalBody>
+          <VStack spacing={4} align="stretch">
+            <Text fontSize="sm" fontWeight="medium">
+              To: {contact?.name} ({contact?.phone})
+            </Text>
             
-            <Box
-              borderRadius="lg"
-              bg="gray.50"
-              _dark={{ bg: 'gray.800' }}
-              p={3}
-            >
-              <HStack spacing={2}>
-                <Input
-                  size="sm"
-                  placeholder="Type your message..."
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  variant="unstyled"
-                  disabled={isSending}
-                  autoFocus
-                />
-                <IconButton
-                  icon={<Send size={14} />}
-                  size="sm"
-                  colorScheme="blue"
-                  isDisabled={!message.trim() || isSending}
-                  onClick={handleSendMessage}
-                  aria-label="Send message"
-                  isLoading={isSending}
-                  _hover={{ transform: 'translateX(2px)' }}
-                  transition="all 0.2s"
-                />
-              </HStack>
-            </Box>
+            <Textarea
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              placeholder="Type your message here..."
+              size="sm"
+              rows={4}
+              resize="vertical"
+              autoFocus
+            />
           </VStack>
-        </PopoverBody>
-      </PopoverContent>
-    </Popover>
+        </ModalBody>
+
+        <ModalFooter>
+          <Button variant="ghost" mr={3} onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            colorScheme="blue"
+            onClick={handleSendMessage}
+            isLoading={isSending}
+            loadingText="Sending..."
+            isDisabled={!message.trim()}
+          >
+            Send Message
+          </Button>
+        </ModalFooter>
+      </ModalContent>
+    </Modal>
   );
 };
