@@ -1,13 +1,21 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Box, HStack, IconButton, Text, useColorModeValue } from '@chakra-ui/react';
 import { X, Minus, Square } from 'lucide-react';
 import Draggable from 'react-draggable';
 
-export const DraggableWindow = ({ title, onClose, children, defaultPosition = { x: 50, y: 50 } }) => {
+export const DraggableWindow = ({ 
+  title, 
+  onClose, 
+  children, 
+  defaultPosition = { x: 50, y: 50 },
+  defaultSize = { width: 800, height: 600 },
+  minSize = { width: 400, height: 300 }
+}) => {
   const [isMinimized, setIsMinimized] = useState(false);
-  const [windowSize, setWindowSize] = useState({ width: 800, height: 600 });
+  const [windowSize, setWindowSize] = useState(defaultSize);
   const [isResizing, setIsResizing] = useState(false);
   const resizeRef = useRef(null);
+  const containerRef = useRef(null);
   
   // Color mode hooks
   const bgColor = useColorModeValue('whiteAlpha.800', 'blackAlpha.700');
@@ -16,90 +24,87 @@ export const DraggableWindow = ({ title, onClose, children, defaultPosition = { 
   const scrollbarThumbColor = useColorModeValue('gray.400', 'gray.600');
   const textColor = useColorModeValue('gray.800', 'white');
 
-  const handleMouseDown = (e) => {
-    if (e.target === resizeRef.current) {
-      setIsResizing(true);
-      e.preventDefault();
-      e.stopPropagation();
-    }
-  };
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (!isResizing) return;
 
-  const handleMouseMove = (e) => {
-    if (!isResizing) return;
+      const container = containerRef.current;
+      if (!container) return;
 
-    const newWidth = Math.max(800, e.clientX - e.target.getBoundingClientRect().left);
-    const newHeight = Math.max(600, e.clientY - e.target.getBoundingClientRect().top);
-    
-    setWindowSize({
-      width: newWidth,
-      height: newHeight
-    });
-  };
+      const newWidth = Math.max(
+        minSize.width,
+        e.clientX - container.getBoundingClientRect().left
+      );
+      const newHeight = Math.max(
+        minSize.height,
+        e.clientY - container.getBoundingClientRect().top
+      );
 
-  const handleMouseUp = () => {
-    setIsResizing(false);
-  };
-
-  React.useEffect(() => {
-    if (isResizing) {
-      window.addEventListener('mousemove', handleMouseMove);
-      window.addEventListener('mouseup', handleMouseUp);
-    }
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
+      setWindowSize({
+        width: newWidth,
+        height: newHeight
+      });
     };
-  }, [isResizing]);
 
-  if (isMinimized) return null;
+    const handleMouseUp = () => {
+      setIsResizing(false);
+    };
+
+    if (isResizing) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing, minSize.width, minSize.height]);
+
+  const handleMouseDown = (e) => {
+    e.preventDefault();
+    setIsResizing(true);
+  };
 
   return (
-    <Draggable
-      handle=".window-handle"
-      defaultPosition={defaultPosition}
+    <Draggable 
+      handle=".window-handle" 
       bounds={{
         left: 0,
         top: 0,
-        right: window.innerWidth - windowSize.width,
-        bottom: window.innerHeight - windowSize.height
-      }}
+        right: "parent",
+        bottom: "parent"
+      }} 
+      defaultPosition={defaultPosition}
     >
       <Box
+        ref={containerRef}
         position="absolute"
         width={`${windowSize.width}px`}
         height={`${windowSize.height}px`}
         bg={bgColor}
-        borderRadius="lg"
-        boxShadow="xl"
-        overflow="hidden"
-        border="1px solid"
-        borderColor={borderColor}
         backdropFilter="blur(10px)"
-        css={{
-          '&::-webkit-scrollbar': {
-            width: '4px',
-          },
-          '&::-webkit-scrollbar-track': {
-            width: '6px',
-          },
-          '&::-webkit-scrollbar-thumb': {
-            background: scrollbarThumbColor,
-            borderRadius: '24px',
-          },
+        borderRadius="lg"
+        boxShadow="lg"
+        border="1px"
+        borderColor={borderColor}
+        overflow="hidden"
+        transition="height 0.2s"
+        style={{
+          height: isMinimized ? '45px' : windowSize.height
         }}
       >
-        {/* Window Title Bar */}
+        {/* Window Header */}
         <HStack
           className="window-handle"
-          px={3}
-          py={2}
-          bg={headerBg}
-          cursor="grab"
+          px={4}
+          h="45px"
           justify="space-between"
-          userSelect="none"
-          borderBottom="1px solid"
+          bg={headerBg}
+          borderBottom="1px"
           borderColor={borderColor}
-          _active={{ cursor: "grabbing" }}
+          cursor="grab"
+          userSelect="none"
         >
           <HStack spacing={2}>
             <IconButton
@@ -118,7 +123,7 @@ export const DraggableWindow = ({ title, onClose, children, defaultPosition = { 
               aria-label="Minimize"
               bg="yellow.400"
               _hover={{ bg: 'yellow.500' }}
-              onClick={() => setIsMinimized(true)}
+              onClick={() => setIsMinimized(!isMinimized)}
             />
             <IconButton
               size="xs"
@@ -136,47 +141,63 @@ export const DraggableWindow = ({ title, onClose, children, defaultPosition = { 
         </HStack>
 
         {/* Window Content */}
-        <Box p={4} height="calc(100% - 45px)" overflowY="auto">
+        <Box 
+          height="calc(100% - 45px)" 
+          display={isMinimized ? 'none' : 'block'}
+          css={{
+            '&::-webkit-scrollbar': {
+              width: '4px',
+            },
+            '&::-webkit-scrollbar-track': {
+              background: 'transparent',
+            },
+            '&::-webkit-scrollbar-thumb': {
+              background: scrollbarThumbColor,
+              borderRadius: '2px',
+            },
+          }}
+        >
           {children}
         </Box>
 
         {/* Resize Handle */}
-        <Box
-          ref={resizeRef}
-          position="absolute"
-          bottom={2}
-          right={2}
-          w="20px"
-          h="20px"
-          cursor="nwse-resize"
-          onMouseDown={handleMouseDown}
-          borderRadius="full"
-          bg="blue.500"
-          opacity="0.8"
-          _hover={{ opacity: 1 }}
-          transition="opacity 0.2s"
-          zIndex={1000}
-          _before={{
-            content: '""',
-            position: 'absolute',
-            bottom: '6px',
-            right: '6px',
-            width: '8px',
-            height: '2px',
-            bg: 'white',
-            transform: 'rotate(-45deg)'
-          }}
-          _after={{
-            content: '""',
-            position: 'absolute',
-            bottom: '9px',
-            right: '9px',
-            width: '8px',
-            height: '2px',
-            bg: 'white',
-            transform: 'rotate(-45deg)'
-          }}
-        />
+        {!isMinimized && (
+          <Box
+            position="absolute"
+            bottom={2}
+            right={2}
+            w="20px"
+            h="20px"
+            cursor="nwse-resize"
+            onMouseDown={handleMouseDown}
+            borderRadius="full"
+            bg="blue.500"
+            opacity="0.8"
+            _hover={{ opacity: 1 }}
+            transition="opacity 0.2s"
+            zIndex={1000}
+            _before={{
+              content: '""',
+              position: 'absolute',
+              bottom: '6px',
+              right: '6px',
+              width: '8px',
+              height: '2px',
+              bg: 'white',
+              transform: 'rotate(-45deg)'
+            }}
+            _after={{
+              content: '""',
+              position: 'absolute',
+              bottom: '9px',
+              right: '9px',
+              width: '8px',
+              height: '2px',
+              bg: 'white',
+              transform: 'rotate(-45deg)'
+            }}
+          />
+        )}
       </Box>
     </Draggable>
   );
