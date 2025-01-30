@@ -20,7 +20,7 @@ import { StatusMenu } from './StatusMenu';
 import { X, Minus, Square } from 'lucide-react';
 import Draggable from 'react-draggable';
 
-export const LiveChat = ({ isDark, onClose, selectedContact: initialSelectedContact }) => {
+const LiveChat = ({ isDark, onClose, selectedContact: initialSelectedContact }) => {
   const [selectedPhone, setSelectedPhone] = useState(null);
   const [messages, setMessages] = useState([]);
   const [contacts, setContacts] = useState([
@@ -427,3 +427,5 @@ export const LiveChat = ({ isDark, onClose, selectedContact: initialSelectedCont
     </Draggable>
   );
 };
+
+export default LiveChat;
