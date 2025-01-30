@@ -203,17 +203,21 @@ const ChatArea = ({
                         py={2}
                         borderRadius="lg"
                         maxW="70%"
-                        position="relative"
                       >
                         <Text>{message.message}</Text>
-                        <HStack spacing={1} position="absolute" right="-60px" bottom="0" opacity={0.7} fontSize="xs">
-                          <Text>{formatTime(message.timestamp)}</Text>
-                          {message.direction === 'outbound' && (
-                            <Text color={message.status === 'pending' ? 'yellow.500' : 'green.500'}>
-                              {message.status === 'pending' ? '⋯' : '✓'}
-                            </Text>
-                          )}
-                        </HStack>
+                        <Flex 
+                          justify={message.direction === 'outbound' ? 'flex-end' : 'flex-start'}
+                          mt={1}
+                        >
+                          <HStack spacing={1} fontSize="xs" color={message.direction === 'inbound' ? 'gray.500' : 'whiteAlpha.800'}>
+                            <Text>{formatTime(message.timestamp)}</Text>
+                            {message.direction === 'outbound' && (
+                              <Text color={message.status === 'pending' ? 'yellow.500' : 'green.500'}>
+                                {message.status === 'pending' ? '⋯' : '✓'}
+                              </Text>
+                            )}
+                          </HStack>
+                        </Flex>
                       </Box>
                     </Flex>
                   );

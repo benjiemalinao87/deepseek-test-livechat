@@ -337,6 +337,19 @@ Outbound text messages were failing with a "Failed to fetch" error. The messages
    - UI feedback is clear and accurate
    - Message history is maintained correctly
 
+## UI Improvements
+
+#### Message Timestamp Alignment
+1. **Flexible Layout Structure**
+   - Avoid using absolute positioning for message metadata (timestamps, status indicators)
+   - Use Flex containers to create natural flow and alignment
+   - Place timestamps below messages for better readability and consistent spacing
+
+2. **Visual Hierarchy**
+   - Use subtle colors for metadata (gray for inbound, semi-transparent white for outbound)
+   - Maintain alignment consistency with message direction
+   - Small spacing (mt={1}) provides clear separation between message and metadata
+
 ## Toast Notification Update - 2025-01-30
 
 ### Changes Made
