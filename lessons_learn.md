@@ -124,6 +124,29 @@ Window resizing in LiveChat component was sticking/continuing even after releasi
    - Implement proper event cleanup in component lifecycle
    - Use refs to store intermediate state during drag operations
 
+## Window Resize Functionality (2025-01-30)
+
+#### Improving Resize Handle Usability
+1. **Event Handling**
+   - Use `window` instead of `document` for event listeners to ensure capture of all mouse events
+   - Add event cleanup in useEffect with proper dependency array
+   - Prevent event propagation to avoid conflicts with drag functionality
+
+2. **Visual Feedback**
+   - Create a dedicated resize handle with sufficient hit area (20x20px)
+   - Use subtle visual indicators that become more prominent on hover
+   - Follow Mac OS style with minimal visual footprint
+
+3. **Performance**
+   - Use `requestAnimationFrame` for smooth resize updates
+   - Add bounds checking to prevent window from growing too large
+   - Implement proper cleanup of event listeners to prevent memory leaks
+
+4. **Reliability**
+   - Check for handle element using closest() before initiating resize
+   - Add proper null checks for resize reference
+   - Separate resize logic from drag functionality
+
 ## Inbound Message Display Bug Fix - 2025-01-30
 
 ### Issue
@@ -394,3 +417,386 @@ Outbound text messages were failing with a "Failed to fetch" error. The messages
    - Keep error messages clear and actionable
    - Use consistent error handling patterns
    - Position error notifications where users expect them
+
+## Default Filter State Management Fix - 2025-01-30
+
+### Issue
+The conversation filter in the Contacts component was defaulting to "Open" instead of "All" despite having "All" set as the default value in the store.
+
+### Root Cause Analysis
+1. State Initialization:
+   - The store had `currentFilter: 'All'` set, but the initialization pattern wasn't explicit enough
+   - Component-level initialization using useEffect was causing race conditions with the store's state
+   - The store's state structure wasn't properly encapsulated
+
+### Solution
+1. Store Restructuring:
+   - Created an explicit `initialState` object in the store
+   - Moved all initial values into this object for better clarity
+   - Used object spread to ensure proper state initialization
+   
+2. Files Modified:
+   ```
+   frontend/src/services/contactState.js
+   frontend/src/components/contacts/Contacts.js
+   ```
+
+### Key Lessons
+1. State Management Best Practices:
+   - Keep state initialization explicit and centralized
+   - Avoid component-level initialization for global state
+   - Use a clear initialization pattern in stores
+
+2. Component Design:
+   - Don't mix local and global state initialization
+   - Trust the store's default values
+   - Remove redundant initialization logic
+
+3. Debugging Approach:
+   - Check store implementation first
+   - Look for competing initialization logic
+   - Verify persistence layer impact
+   - Test state flow through the application
+
+### Best Practices
+1. Store Initialization:
+   ```javascript
+   // ❌ Bad: Implicit state initialization
+   const store = create((set) => ({
+     currentFilter: 'All',
+     // ... other state
+   }));
+   
+   // ✅ Good: Explicit state initialization
+   const store = create((set) => {
+     const initialState = {
+       currentFilter: 'All',
+       // ... other state
+     };
+     return {
+       ...initialState,
+       // ... actions
+     };
+   });
+   ```
+
+2. Component State:
+   ```javascript
+   // ❌ Bad: Redundant initialization
+   useEffect(() => {
+     setFilter('All');
+   }, []);
+   
+   // ✅ Good: Trust store defaults
+   const { currentFilter, setFilter } = useStore();
+   ```
+
+### Impact
+- More reliable state initialization
+- Clearer code organization
+- Better maintainability
+- Reduced chance of state conflicts
+
+## Component Props Consistency Fix - 2025-01-30
+
+### Issue
+The AddContactModal component was throwing errors about undefined `firstName` property because of mismatched prop names between the parent component and the modal component.
+
+### Root Cause Analysis
+1. Prop Name Mismatch:
+   - Parent component was using different prop names than what the modal expected
+   - `contact` was used instead of `newContact`
+   - `setContact` was used instead of `onNewContactChange`
+   - `onSubmit` was used instead of `onAddContact`
+
+### Solution
+1. Aligned prop names between components:
+   ```javascript
+   // ❌ Bad: Inconsistent prop names
+   <AddContactModal
+     contact={newContact}
+     setContact={setNewContact}
+     onSubmit={handleAddContact}
+   />
+   
+   // ✅ Good: Matching prop names with component expectations
+   <AddContactModal
+     newContact={newContact}
+     onNewContactChange={setNewContact}
+     onAddContact={handleAddContact}
+   />
+   ```
+
+### Key Lessons
+1. Component Contract:
+   - Keep prop names consistent between parent and child components
+   - Use descriptive prop names that indicate their purpose
+   - Document expected prop types and structures
+
+2. Error Prevention:
+   - TypeScript would have caught this error at compile time
+   - Consider using PropTypes for runtime type checking
+   - Always test component integration points
+
+3. Debugging:
+   - Runtime errors about undefined properties often indicate prop mismatches
+   - Check both the parent and child component interfaces
+   - Verify prop names and data structures match
+
+### Impact
+- More reliable component communication
+- Clearer component interfaces
+- Easier debugging and maintenance
+
+## Component Reusability and UI Integration - 2025-01-31
+
+### Implementation
+Added call and appointment scheduling functionality to the ContactCard component by:
+1. Integrating existing AppointmentScheduler component
+2. Adding simulated call functionality
+3. Improving action icon layout
+
+### Key Lessons
+1. Component Reusability:
+   - Reused AppointmentScheduler component across different contexts
+   - Maintained consistent UI patterns and user experience
+   - Reduced code duplication and maintenance overhead
+
+2. Progressive Enhancement:
+   - Added features without disrupting existing functionality
+   - Maintained clean, minimal UI despite adding new features
+   - Used hover states to reveal additional actions
+
+3. User Feedback:
+   - Added toast notifications for important actions
+   - Simulated async operations (call connection) with appropriate feedback
+   - Kept user informed of action status and results
+
+### Best Practices
+1. Component Integration:
+   ```javascript
+   // ❌ Bad: Duplicating appointment scheduling logic
+   const handleAppointment = () => {
+     // Duplicate appointment logic here
+   };
+   
+   // ✅ Good: Reusing existing component
+   <AppointmentScheduler
+     contact={contact}
+     onSchedule={handleScheduleAppointment}
+   />
+   ```
+
+2. Action Grouping:
+   ```javascript
+   // ❌ Bad: Scattered action buttons
+   <IconButton />
+   <Box>Other content</Box>
+   <IconButton />
+   
+   // ✅ Good: Grouped related actions
+   <HStack spacing={1} className="actions">
+     <IconButton /> {/* Call */}
+     <IconButton /> {/* Calendar */}
+     <IconButton /> {/* Chat */}
+   </HStack>
+   ```
+
+3. User Feedback:
+   ```javascript
+   // ❌ Bad: No feedback for async operations
+   const handleCall = () => {
+     initiateCall(contact.phone);
+   };
+   
+   // ✅ Good: Clear feedback states
+   const handleCall = () => {
+     toast({ title: 'Calling...', status: 'info' });
+     setTimeout(() => {
+       toast({ title: 'Connected', status: 'success' });
+     }, 2000);
+   };
+   ```
+
+### Impact
+- Improved user experience with more accessible actions
+- Maintained consistent design language
+- Reduced development time through component reuse
+- Enhanced user feedback for all actions
+
+## Handling Duplicate Messages in Real-time Chat - 2025-01-31
+
+### Problem
+When sending messages in LiveChat, messages appeared twice because:
+1. We add the message to state immediately for better UX
+2. The server sends back the same message through Socket.IO
+3. Simple duplicate detection based on messageSid and timestamp wasn't sufficient
+
+### Solution
+Implemented a more robust duplicate detection system that:
+1. Checks messageSid if available
+2. For outbound messages, checks message content, recipient, and timestamp proximity
+3. For other messages, checks content, sender, and timestamp proximity
+4. Updates existing message with server data instead of adding duplicate
+
+### Code Example
+```javascript
+// ❌ Basic duplicate detection - Too simple
+const isDuplicate = prev.some(m => 
+  m.messageSid === data.messageSid || 
+  (m.timestamp === timestamp && m.message === message)
+);
+
+// ✅ Robust duplicate detection
+const isDuplicate = prev.some(m => (
+  // Check messageSid if available
+  (data.messageSid && m.messageSid === data.messageSid) ||
+  // For outbound messages
+  (data.direction === 'outbound' && m.direction === 'outbound' && 
+   m.message === message && m.to === data.to && 
+   Math.abs(new Date(m.timestamp) - new Date(timestamp)) < 5000) ||
+  // For other messages
+  (m.message === message && m.from === from && 
+   Math.abs(new Date(m.timestamp) - new Date(timestamp)) < 5000)
+));
+
+if (isDuplicate) {
+  // Update existing message instead of ignoring
+  return prev.map(m => {
+    if (/* same conditions */) {
+      return { ...m, ...data };
+    }
+    return m;
+  });
+}
+```
+
+### Key Learnings
+1. **Optimistic Updates**: Adding messages immediately improves UX but requires careful handling of server responses
+2. **Flexible Matching**: Using multiple criteria for duplicate detection is more reliable than exact matches
+3. **Time Windows**: Using a small time window (5 seconds) for matching helps catch duplicates with slightly different timestamps
+4. **State Updates**: Instead of just preventing duplicates, updating existing messages with server data ensures consistency
+
+### Impact
+- Eliminated duplicate messages while maintaining instant message feedback
+- Improved message state consistency between client and server
+- Better user experience with no visible message flicker or duplication
+
+## Message Duplication in Real-time Chat: Best Practices - 2025-01-31
+
+### Initial Design Flaws
+The original implementation had several issues that led to message duplication:
+1. **Optimistic Updates Without Tracking**: Added messages to state immediately without a way to match them with server responses
+2. **Oversimplified Duplicate Detection**: Only checked messageSid and exact timestamp matches
+3. **Missing Message State Management**: No proper handling of message lifecycle (pending → sent → delivered)
+
+### Best Practices for Real-time Chat Design
+
+1. **Message Lifecycle Management**
+```javascript
+// ❌ Bad: No message state tracking
+const sendMessage = async (message) => {
+  setMessages([...messages, message]);
+  await sendToServer(message);
+};
+
+// ✅ Good: Track message state
+const sendMessage = async (message) => {
+  const tempId = `temp-${Date.now()}`;
+  const pendingMessage = {
+    id: tempId,
+    status: 'pending',
+    timestamp: new Date().toISOString(),
+    ...message
+  };
+  
+  setMessages([...messages, pendingMessage]);
+  try {
+    const response = await sendToServer(message);
+    // Update with server data
+    updateMessage(tempId, {
+      id: response.id,
+      status: 'sent',
+      ...response
+    });
+  } catch (error) {
+    updateMessage(tempId, { status: 'failed' });
+  }
+};
+```
+
+2. **Robust Duplicate Detection**
+```javascript
+// ❌ Bad: Simple matching
+const isDuplicate = messages.some(m => 
+  m.id === newMessage.id
+);
+
+// ✅ Good: Multi-factor matching
+const isDuplicate = messages.some(m => (
+  // Check multiple factors
+  m.id === newMessage.id ||
+  (m.content === newMessage.content &&
+   m.sender === newMessage.sender &&
+   Math.abs(new Date(m.timestamp) - new Date(newMessage.timestamp)) < 5000)
+));
+```
+
+3. **Socket Event Handling**
+```javascript
+// ❌ Bad: Direct state updates
+socket.on('message', (data) => {
+  setMessages([...messages, data]);
+});
+
+// ✅ Good: Smart state updates
+socket.on('message', (data) => {
+  setMessages(prev => {
+    const existing = prev.find(m => isPotentialDuplicate(m, data));
+    if (existing) {
+      return prev.map(m => 
+        isPotentialDuplicate(m, data) ? { ...m, ...data } : m
+      );
+    }
+    return [...prev, data];
+  });
+});
+```
+
+### Key Design Principles
+
+1. **Message Identity**
+   - Generate temporary IDs for pending messages
+   - Update with server-generated IDs when available
+   - Use composite keys for duplicate detection
+
+2. **State Management**
+   - Track message status (pending, sent, delivered, failed)
+   - Handle optimistic updates properly
+   - Provide visual feedback for message state
+
+3. **Error Handling**
+   - Gracefully handle network failures
+   - Allow message retry
+   - Maintain UI consistency during errors
+
+4. **Performance**
+   - Use efficient data structures for message lookup
+   - Implement pagination for message history
+   - Clean up old message states
+
+### Impact of Good Design
+- Reliable message delivery
+- No duplicate messages
+- Clear message status feedback
+- Better error recovery
+- Improved user experience
+
+### Recommendations for Developers
+1. Always implement proper message state management from the start
+2. Use temporary IDs for optimistic updates
+3. Implement robust duplicate detection using multiple factors
+4. Handle all possible message states and errors
+5. Test edge cases like network failures and reconnections
+6. Document message flow and state transitions
+7. Use TypeScript or PropTypes for better type safety

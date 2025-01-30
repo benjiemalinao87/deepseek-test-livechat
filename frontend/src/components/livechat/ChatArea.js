@@ -14,8 +14,9 @@ import {
   MenuButton,
   MenuList,
   MenuItem,
+  Icon,
 } from '@chakra-ui/react';
-import { BsThreeDotsVertical } from 'react-icons/bs';
+import { BsThreeDotsVertical, BsPersonPlus } from 'react-icons/bs';
 import { IoSend } from 'react-icons/io5';
 
 const ChatArea = ({ 
@@ -23,9 +24,12 @@ const ChatArea = ({
   messages = [], 
   onSendMessage,
   socket,
-  isDark 
+  isDark,
+  availableAgents = [],
+  onAssignAgent
 }) => {
   const [newMessage, setNewMessage] = useState('');
+  const [selectedAgent, setSelectedAgent] = useState(null);
   const messagesEndRef = useRef(null);
   const chatContainerRef = useRef(null);
   const inputRef = useRef(null);
@@ -130,24 +134,97 @@ const ChatArea = ({
                 {selectedContact.name}
               </Text>
               <Text fontSize="sm" color={mutedTextColor}>
-                {selectedContact.status || 'Online'}
+                {selectedContact.status || 'Active'}
               </Text>
             </Box>
           </HStack>
-          <Menu>
-            <MenuButton
-              as={IconButton}
-              icon={<BsThreeDotsVertical />}
-              variant="ghost"
-              size="sm"
-              aria-label="More options"
-            />
-            <MenuList>
-              <MenuItem>View Profile</MenuItem>
-              <MenuItem>Clear Chat</MenuItem>
-              <MenuItem>Block Contact</MenuItem>
-            </MenuList>
-          </Menu>
+          <HStack spacing={2}>
+            <Menu>
+              <MenuButton
+                as={IconButton}
+                variant="ghost"
+                size="sm"
+                p={0}
+                minW={8}
+                h={8}
+                _hover={{ bg: 'gray.100' }}
+              >
+                {selectedAgent ? (
+                  <Avatar
+                    size="sm"
+                    name={selectedAgent.name}
+                    bg={selectedAgent.color}
+                    fontSize="xs"
+                  >
+                    {selectedAgent.initials}
+                  </Avatar>
+                ) : (
+                  <Avatar
+                    size="sm"
+                    icon={<Icon as={BsPersonPlus} fontSize="1.2rem" color="gray.600" />}
+                    bg="gray.100"
+                    _hover={{ bg: 'gray.200' }}
+                  />
+                )}
+              </MenuButton>
+              <MenuList
+                mt={1}
+                borderRadius="md"
+                overflow="hidden"
+                border="1px"
+                borderColor={borderColor}
+                py={1}
+              >
+                {availableAgents.map((agent) => (
+                  <MenuItem
+                    key={agent.id}
+                    onClick={() => {
+                      setSelectedAgent(agent);
+                      if (onAssignAgent) onAssignAgent(selectedContact, agent);
+                    }}
+                  >
+                    <HStack spacing={2}>
+                      <Avatar
+                        size="sm"
+                        name={agent.name}
+                        bg={agent.color}
+                        fontSize="xs"
+                      >
+                        {agent.initials}
+                      </Avatar>
+                      <Text fontSize="sm">
+                        {agent.name}
+                      </Text>
+                    </HStack>
+                  </MenuItem>
+                ))}
+                <Divider my={1} />
+                <MenuItem
+                  onClick={() => {
+                    setSelectedAgent(null);
+                    if (onAssignAgent) onAssignAgent(selectedContact, null);
+                  }}
+                  color="gray.500"
+                >
+                  <Text fontSize="sm">Clear assignment</Text>
+                </MenuItem>
+              </MenuList>
+            </Menu>
+            <Menu>
+              <MenuButton
+                as={IconButton}
+                icon={<BsThreeDotsVertical />}
+                variant="ghost"
+                size="sm"
+                aria-label="More options"
+              />
+              <MenuList>
+                <MenuItem>View Profile</MenuItem>
+                <MenuItem>Clear Chat</MenuItem>
+                <MenuItem>Block Contact</MenuItem>
+              </MenuList>
+            </Menu>
+          </HStack>
         </Flex>
       </Box>
 

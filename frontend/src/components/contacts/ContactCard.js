@@ -12,16 +12,11 @@ import {
   MenuButton,
   MenuList,
   MenuItem,
-  Popover,
-  PopoverTrigger,
-  PopoverContent,
-  PopoverArrow,
-  PopoverCloseButton,
-  PopoverHeader,
-  PopoverBody,
+  useToast,
 } from '@chakra-ui/react';
-import { MessageCircle } from 'lucide-react';
+import { MessageCircle, Phone, Calendar } from 'lucide-react';
 import { QuickMessage } from './QuickMessage';
+import { AppointmentScheduler } from '../appointments/AppointmentScheduler';
 
 /**
  * ContactCard Component
@@ -29,12 +24,15 @@ import { QuickMessage } from './QuickMessage';
  * Displays contact information and provides messaging options:
  * 1. Open in LiveChat - Opens the full LiveChat interface
  * 2. Quick Message - Opens a popup for sending a quick message
+ * 3. Call - Simulates a phone call
+ * 4. Schedule Appointment - Opens appointment scheduler
  * 
  * @param {Object} contact - Contact information object
  * @param {Function} onOpenLiveChat - Callback to open LiveChat with the contact
  */
 export const ContactCard = ({ contact, onOpenLiveChat }) => {
   const [isQuickMessageOpen, setIsQuickMessageOpen] = useState(false);
+  const toast = useToast();
   
   const cardBg = useColorModeValue('white', 'gray.800');
   const borderColor = useColorModeValue('gray.200', 'gray.700');
@@ -54,7 +52,6 @@ export const ContactCard = ({ contact, onOpenLiveChat }) => {
 
   /**
    * Handle opening LiveChat with the current contact
-   * Uses existing LiveChat logic for Twilio integration
    */
   const handleOpenLiveChat = () => {
     if (onOpenLiveChat) {
@@ -64,10 +61,45 @@ export const ContactCard = ({ contact, onOpenLiveChat }) => {
 
   /**
    * Toggle the QuickMessage popup
-   * QuickMessage component handles its own Twilio integration
    */
   const handleToggleQuickMessage = () => {
     setIsQuickMessageOpen(!isQuickMessageOpen);
+  };
+
+  /**
+   * Simulate a phone call
+   */
+  const handleCall = () => {
+    toast({
+      title: 'Calling...',
+      description: `Initiating call to ${contact.name} at ${contact.phone}`,
+      status: 'info',
+      duration: 3000,
+      isClosable: true,
+    });
+    
+    // Simulate call connection after 2 seconds
+    setTimeout(() => {
+      toast({
+        title: 'Call Connected',
+        description: `Connected with ${contact.name}`,
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      });
+    }, 2000);
+  };
+
+  /**
+   * Handle scheduling an appointment
+   */
+  const handleScheduleAppointment = (appointment) => {
+    toast({
+      title: 'Appointment Scheduled',
+      description: `Appointment scheduled with ${contact.name} for ${appointment.date} at ${appointment.time}`,
+      status: 'success',
+      duration: 3000,
+    });
   };
 
   return (
@@ -120,26 +152,39 @@ export const ContactCard = ({ contact, onOpenLiveChat }) => {
           </HStack>
         </VStack>
 
-        {/* Message Actions Menu */}
-        <Menu>
-          <MenuButton
-            as={IconButton}
-            icon={<MessageCircle size={18} />}
+        {/* Action Icons */}
+        <HStack spacing={1} className="actions" opacity={0.6}>
+          <IconButton
+            icon={<Phone size={18} />}
             variant="ghost"
             size="sm"
-            aria-label="Send Message"
-            className="actions"
-            opacity={0.6}
+            aria-label="Call Contact"
+            onClick={handleCall}
           />
-          <MenuList bg={menuBg}>
-            <MenuItem onClick={handleOpenLiveChat}>
-              Open in LiveChat
-            </MenuItem>
-            <MenuItem onClick={handleToggleQuickMessage}>
-              Send Quick Message
-            </MenuItem>
-          </MenuList>
-        </Menu>
+          
+          <AppointmentScheduler
+            contact={contact}
+            onSchedule={handleScheduleAppointment}
+          />
+
+          <Menu>
+            <MenuButton
+              as={IconButton}
+              icon={<MessageCircle size={18} />}
+              variant="ghost"
+              size="sm"
+              aria-label="Send Message"
+            />
+            <MenuList bg={menuBg}>
+              <MenuItem onClick={handleOpenLiveChat}>
+                Open in LiveChat
+              </MenuItem>
+              <MenuItem onClick={handleToggleQuickMessage}>
+                Send Quick Message
+              </MenuItem>
+            </MenuList>
+          </Menu>
+        </HStack>
       </HStack>
 
       {/* Quick Message Popup */}

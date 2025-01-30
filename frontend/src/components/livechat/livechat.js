@@ -42,7 +42,7 @@ const LiveChat = ({ isDark, onClose, selectedContact: initialSelectedContact }) 
   const [selectedContact, setSelectedContact] = useState(null);
   const [messages, setMessages] = useState([]);
   const [isConnected, setIsConnected] = useState(false);
-  const [windowSize, setWindowSize] = useState({ width: 800, height: 600 });
+  const [windowSize, setWindowSize] = useState({ width: 600, height: 500 });
   const [isResizing, setIsResizing] = useState(false);
   const resizeRef = useRef(null);
   const containerRef = useRef(null);
@@ -103,12 +103,31 @@ const LiveChat = ({ isDark, onClose, selectedContact: initialSelectedContact }) 
     const { from, message, timestamp } = data;
     
     setMessages(prev => {
-      const isDuplicate = prev.some(m => 
-        m.messageSid === data.messageSid || 
-        (m.timestamp === timestamp && m.message === message)
-      );
+      // More robust duplicate detection
+      const isDuplicate = prev.some(m => (
+        // Check messageSid if available
+        (data.messageSid && m.messageSid === data.messageSid) ||
+        // For outbound messages, check if we already have a pending message with same content
+        (data.direction === 'outbound' && m.direction === 'outbound' && 
+         m.message === message && m.to === data.to && 
+         Math.abs(new Date(m.timestamp) - new Date(timestamp)) < 5000) || // Within 5 seconds
+        // For other cases, check content and timestamp
+        (m.message === message && m.from === from && 
+         Math.abs(new Date(m.timestamp) - new Date(timestamp)) < 5000)
+      ));
       
-      if (isDuplicate) return prev;
+      if (isDuplicate) {
+        // If duplicate, update the existing message with server data
+        return prev.map(m => {
+          if ((data.messageSid && m.messageSid === data.messageSid) ||
+              (m.message === message && m.from === from && 
+               Math.abs(new Date(m.timestamp) - new Date(timestamp)) < 5000)) {
+            return { ...m, ...data };
+          }
+          return m;
+        });
+      }
+      
       return [...prev, data];
     });
     
@@ -234,53 +253,46 @@ const LiveChat = ({ isDark, onClose, selectedContact: initialSelectedContact }) 
 
   // Window resize handlers
   const handleMouseDown = (e) => {
-    e.preventDefault(); // Prevent text selection
+    e.preventDefault();
     setIsResizing(true);
-    resizeRef.current = {
-      startX: e.clientX,
-      startY: e.clientY,
-      startWidth: windowSize.width,
-      startHeight: windowSize.height
+  };
+
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (!isResizing) return;
+
+      const container = containerRef.current;
+      if (!container) return;
+
+      const newWidth = Math.max(
+        600, // min width
+        e.clientX - container.getBoundingClientRect().left
+      );
+      const newHeight = Math.max(
+        400, // min height
+        e.clientY - container.getBoundingClientRect().top
+      );
+
+      setWindowSize({
+        width: Math.min(newWidth, window.innerWidth - 50),
+        height: Math.min(newHeight, window.innerHeight - 50)
+      });
     };
 
-    // Add window-level event listeners
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-  };
+    const handleMouseUp = () => {
+      setIsResizing(false);
+    };
 
-  const handleMouseUp = (e) => {
-    if (!isResizing) return;
-    
-    setIsResizing(false);
-    resizeRef.current = null;
+    if (isResizing) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    }
 
-    // Remove window-level event listeners
-    document.removeEventListener('mousemove', handleMouseMove);
-    document.removeEventListener('mouseup', handleMouseUp);
-  };
-
-  const handleMouseMove = (e) => {
-    if (!isResizing || !resizeRef.current) return;
-
-    e.preventDefault(); // Prevent text selection while resizing
-    const deltaX = e.clientX - resizeRef.current.startX;
-    const deltaY = e.clientY - resizeRef.current.startY;
-
-    requestAnimationFrame(() => {
-      setWindowSize({
-        width: Math.max(600, resizeRef.current.startWidth + deltaX),
-        height: Math.max(400, resizeRef.current.startHeight + deltaY)
-      });
-    });
-  };
-
-  // Cleanup event listeners on unmount
-  useEffect(() => {
     return () => {
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
-  }, []); // Empty dependency array since we're just cleaning up
+  }, [isResizing]);
 
   const bg = useColorModeValue('whiteAlpha.800', 'blackAlpha.700');
   const borderColor = useColorModeValue('whiteAlpha.300', 'whiteAlpha.100');
@@ -298,6 +310,23 @@ const LiveChat = ({ isDark, onClose, selectedContact: initialSelectedContact }) 
       return '1' + digits;
     }
     return digits;
+  };
+
+  // Available agents data
+  const availableAgents = [
+    { id: 1, name: 'Allison', initials: 'AL', color: 'purple.500' },
+    { id: 2, name: 'Lyndel', initials: 'LY', color: 'blue.500' },
+    { id: 3, name: 'Guktork', initials: 'GK', color: 'orange.500' }
+  ];
+
+  const handleAssignAgent = (contact, agent) => {
+    if (contact) {
+      const updatedContact = {
+        ...contact,
+        assignedAgent: agent
+      };
+      updateContact(contact.id, updatedContact);
+    }
   };
 
   return (
@@ -376,7 +405,7 @@ const LiveChat = ({ isDark, onClose, selectedContact: initialSelectedContact }) 
         </HStack>
 
         {/* Window Content */}
-        <Box height="calc(100% - 45px)">
+        <Box height="calc(100% - 45px)" position="relative">
           <Grid
             templateColumns="300px 1fr 300px"
             h="100%"
@@ -403,50 +432,52 @@ const LiveChat = ({ isDark, onClose, selectedContact: initialSelectedContact }) 
                 onSendMessage={handleSendMessage}
                 socket={socket.current}
                 isDark={isDark}
+                availableAgents={availableAgents}
+                onAssignAgent={handleAssignAgent}
               />
             </GridItem>
             <GridItem borderLeft="1px" borderColor={borderColor} overflow="hidden">
               <UserDetails selectedContact={selectedContact} />
             </GridItem>
           </Grid>
-        </Box>
 
-        {/* Resize Handle */}
-        <Box
-          position="absolute"
-          bottom={2}
-          right={2}
-          w="20px"
-          h="20px"
-          cursor="nwse-resize"
-          onMouseDown={handleMouseDown}
-          borderRadius="full"
-          bg="blue.500"
-          opacity="0.8"
-          _hover={{ opacity: 1 }}
-          transition="opacity 0.2s"
-          zIndex={1000}
-          _before={{
-            content: '""',
-            position: 'absolute',
-            bottom: '6px',
-            right: '6px',
-            width: '8px',
-            height: '2px',
-            bg: 'white',
-            transform: 'rotate(-45deg)'
-          }}
-          _after={{
-            content: '""',
-            position: 'absolute',
-            bottom: '9px',
-            right: '9px',
-            width: '8px',
-            height: '2px',
-            bg: 'white',
-            transform: 'rotate(-45deg)'
-          }}
-        />
+          {/* Resize Handle */}
+          <Box
+            position="absolute"
+            bottom={2}
+            right={2}
+            w="20px"
+            h="20px"
+            cursor="nwse-resize"
+            onMouseDown={handleMouseDown}
+            borderRadius="full"
+            bg="blue.500"
+            opacity="0.8"
+            _hover={{ opacity: 1 }}
+            transition="opacity 0.2s"
+            zIndex={1000}
+            _before={{
+              content: '""',
+              position: 'absolute',
+              bottom: '6px',
+              right: '6px',
+              width: '8px',
+              height: '2px',
+              bg: 'white',
+              transform: 'rotate(-45deg)'
+            }}
+            _after={{
+              content: '""',
+              position: 'absolute',
+              bottom: '9px',
+              right: '9px',
+              width: '8px',
+              height: '2px',
+              bg: 'white',
+              transform: 'rotate(-45deg)'
+            }}
+          />
+        </Box>
       </Box>
     </Draggable>
   );

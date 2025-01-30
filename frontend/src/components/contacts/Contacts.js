@@ -9,9 +9,8 @@ import {
   IconButton,
   Select,
   useColorModeValue,
-  Button,
 } from '@chakra-ui/react';
-import { Search, Filter, Users, Calendar, List } from 'lucide-react';
+import { Search, Filter, UserPlus } from 'lucide-react';
 import { ContactCard } from './ContactCard';
 import { AddContactModal } from './AddContactModal';
 import useContactStore from '../../services/contactState';
@@ -148,10 +147,10 @@ export const Contacts = ({ onOpenLiveChat }) => {
             borderColor={borderColor}
             w="200px"
           >
-            <option>All Tags</option>
-            <option>VIP</option>
-            <option>Enterprise</option>
-            <option>Technical</option>
+            <option value="All Tags">All Tags</option>
+            <option value="VIP">VIP</option>
+            <option value="Enterprise">Enterprise</option>
+            <option value="Technical">Technical</option>
           </Select>
 
           <Select
@@ -161,7 +160,7 @@ export const Contacts = ({ onOpenLiveChat }) => {
             borderColor={borderColor}
             w="200px"
           >
-            <option value="All">All Status</option>
+            <option value="All">All</option>
             <option value="Open">Open</option>
             <option value="Pending">Pending</option>
             <option value="Done">Done</option>
@@ -174,58 +173,33 @@ export const Contacts = ({ onOpenLiveChat }) => {
             aria-label="More filters"
             variant="ghost"
           />
-        </HStack>
 
-        {/* View Options and Add Contact */}
-        <HStack justify="space-between">
-          <HStack spacing={2}>
-            <IconButton
-              icon={<Users size={18} />}
-              aria-label="Grid view"
-              variant="ghost"
-              colorScheme="blue"
-            />
-            <IconButton
-              icon={<Calendar size={18} />}
-              aria-label="Calendar view"
-              variant="ghost"
-            />
-            <IconButton
-              icon={<List size={18} />}
-              aria-label="List view"
-              variant="ghost"
-            />
-          </HStack>
-
-          <Button
+          <IconButton
+            icon={<UserPlus size={18} />}
+            aria-label="Add contact"
             colorScheme="blue"
-            size="sm"
             onClick={() => setIsAddContactModalOpen(true)}
-          >
-            Add Contact
-          </Button>
+          />
         </HStack>
 
         {/* Contact List */}
-        <VStack spacing={3} align="stretch">
-          {filteredContacts.map(contact => (
-            <ContactCard
-              key={contact.id}
-              contact={contact}
-              onOpenLiveChat={handleOpenLiveChat}
-            />
-          ))}
-        </VStack>
-      </VStack>
+        {filteredContacts.map(contact => (
+          <ContactCard
+            key={contact.id}
+            contact={contact}
+            onOpenLiveChat={handleOpenLiveChat}
+          />
+        ))}
 
-      {/* Add Contact Modal */}
-      <AddContactModal
-        isOpen={isAddContactModalOpen}
-        onClose={handleCloseModal}
-        newContact={newContact}
-        onNewContactChange={setNewContact}
-        onAddContact={handleAddContact}
-      />
+        {/* Add Contact Modal */}
+        <AddContactModal
+          isOpen={isAddContactModalOpen}
+          onClose={handleCloseModal}
+          newContact={newContact}
+          onNewContactChange={setNewContact}
+          onAddContact={handleAddContact}
+        />
+      </VStack>
     </Box>
   );
 };
