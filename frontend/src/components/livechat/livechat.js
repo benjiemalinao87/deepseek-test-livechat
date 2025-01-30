@@ -117,13 +117,14 @@ const LiveChat = ({ isDark, onClose, selectedContact: initialSelectedContact }) 
       }
     }
 
-    // Show toast notification for new messages
+    // Show toast notification for new messages in bottom-right
     if (data.direction === 'inbound') {
       toast({
         title: 'New Message',
         description: `From: ${from}\n${message}`,
         status: 'info',
         duration: 3000,
+        position: 'bottom-right'
       });
     }
   };
@@ -136,6 +137,7 @@ const LiveChat = ({ isDark, onClose, selectedContact: initialSelectedContact }) 
         description: 'Please enter both phone number and message',
         status: 'error',
         duration: 3000,
+        position: 'bottom-right'
       });
       return;
     }
@@ -153,52 +155,19 @@ const LiveChat = ({ isDark, onClose, selectedContact: initialSelectedContact }) 
         }),
       });
 
-      const data = await response.json();
-      
-      if (data.success) {
-        // Create outbound message object
-        const outboundMessage = {
-          from: '+13256665486',
-          to: to,
-          message: message.trim(),
-          timestamp: new Date().toISOString(),
-          direction: 'outbound',
-          messageSid: data.messageSid,
-          status: data.status
-        };
-
-        // Add message to state
-        setMessages(prev => {
-          const isDuplicate = prev.some(m => 
-            m.messageSid === data.messageSid || 
-            (m.timestamp === outboundMessage.timestamp && m.message === outboundMessage.message)
-          );
-          
-          if (isDuplicate) return prev;
-          return [...prev, outboundMessage];
-        });
-
-        // Update contact's last message
-        const contact = contacts.find(c => c.phone === to);
-        if (contact) {
-          updateLastMessage(contact.id, message, outboundMessage.timestamp);
-        }
-
-        toast({
-          title: 'Message sent',
-          status: 'success',
-          duration: 3000,
-        });
-      } else {
-        throw new Error(data.error || 'Failed to send message');
+      if (!response.ok) {
+        throw new Error('Failed to send message');
       }
+
+      // No toast notification for successful send
+      
     } catch (error) {
-      console.error('❌ Send message error:', error);
       toast({
         title: 'Error sending message',
         description: error.message,
         status: 'error',
         duration: 3000,
+        position: 'bottom-right'
       });
     }
   };
