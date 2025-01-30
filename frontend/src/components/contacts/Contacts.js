@@ -13,19 +13,127 @@ import {
   Tooltip,
   Flex,
   Spacer,
+  useToast,
 } from '@chakra-ui/react';
 import { Search, Plus, Filter, Grid, List, UserPlus } from 'lucide-react';
 import { ContactCard } from './ContactCard';
 import { demoContacts } from './ContactData';
-import AddContactModal from './AddContactModal';
+import { AddContactModal } from './AddContactModal';
 import { useDisclosure } from '@chakra-ui/react';
 
 export const Contacts = () => {
-  const [contacts] = useState(demoContacts);
+  const [contacts, setContacts] = useState(demoContacts);
   const [viewMode, setViewMode] = useState('grid');
+  const [newContact, setNewContact] = useState({
+    firstName: '',
+    lastName: '',
+    phone: '',
+    email: '',
+    leadSource: '',
+    market: '',
+    product: ''
+  });
+  
   const borderColor = useColorModeValue('gray.200', 'gray.700');
   const bgColor = useColorModeValue('gray.50', 'gray.900');
   const { isOpen, onOpen, onClose } = useDisclosure();
+  const toast = useToast();
+
+  const handleAddContact = (contactData) => {
+    try {
+      const contact = {
+        id: contacts.length + 1,
+        name: `${contactData.firstName} ${contactData.lastName}`.trim(),
+        phone: contactData.phone,
+        email: contactData.email,
+        leadSource: contactData.leadSource,
+        market: contactData.market,
+        product: contactData.product,
+        labels: contactData.labels || [],
+        time: 'Just now',
+        status: 'Open'
+      };
+      
+      setContacts(prev => [...prev, contact]);
+      onClose();
+      setNewContact({
+        firstName: '',
+        lastName: '',
+        phone: '',
+        email: '',
+        leadSource: '',
+        market: '',
+        product: ''
+      });
+
+      toast({
+        title: 'Contact Added',
+        description: `${contact.name} has been added to your contacts`,
+        status: 'success',
+        duration: 3000,
+      });
+    } catch (error) {
+      console.error('Error adding contact:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to add contact. Please try again.',
+        status: 'error',
+        duration: 3000,
+      });
+    }
+  };
+
+  const handleCreateOpportunity = (opportunity) => {
+    try {
+      // Add opportunity label to contact
+      setContacts(prev => prev.map(contact => 
+        contact.phone === opportunity.contactPhone 
+          ? { ...contact, labels: [...(contact.labels || []), 'opportunity'] }
+          : contact
+      ));
+
+      toast({
+        title: 'Opportunity Created',
+        description: `New opportunity created for ${opportunity.contactName}`,
+        status: 'success',
+        duration: 3000,
+      });
+    } catch (error) {
+      console.error('Error creating opportunity:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to create opportunity. Please try again.',
+        status: 'error',
+        duration: 3000,
+      });
+    }
+  };
+
+  const handleScheduleAppointment = (appointment) => {
+    try {
+      // Add appointment label to contact
+      setContacts(prev => prev.map(contact => 
+        contact.phone === appointment.contactPhone 
+          ? { ...contact, labels: [...(contact.labels || []), 'appointment'] }
+          : contact
+      ));
+
+      toast({
+        title: 'Appointment Scheduled',
+        description: `Appointment scheduled with ${appointment.contactName}`,
+        status: 'success',
+        duration: 3000,
+      });
+    } catch (error) {
+      console.error('Error scheduling appointment:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to schedule appointment. Please try again.',
+        status: 'error',
+        duration: 3000,
+      });
+    }
+  };
 
   return (
     <Box h="100%" bg={bgColor}>
@@ -121,7 +229,15 @@ export const Contacts = () => {
         </VStack>
       </Box>
 
-      <AddContactModal isOpen={isOpen} onClose={onClose} />
+      <AddContactModal 
+        isOpen={isOpen} 
+        onClose={onClose}
+        newContact={newContact}
+        onNewContactChange={setNewContact}
+        onAddContact={handleAddContact}
+        onCreateOpportunity={handleCreateOpportunity}
+        onScheduleAppointment={handleScheduleAppointment}
+      />
     </Box>
   );
 };

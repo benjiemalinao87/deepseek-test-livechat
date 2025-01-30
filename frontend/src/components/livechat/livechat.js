@@ -15,7 +15,7 @@ import { socket } from '../../socket';
 import { ContactList } from './ContactList';
 import { ChatArea } from './ChatArea';
 import { UserDetails } from './UserDetails';
-import { AddContactModal } from './AddContactModal';
+import { AddContactModal } from '../contacts/AddContactModal';
 import { StatusMenu } from './StatusMenu';
 import { X, Minus, Square } from 'lucide-react';
 import Draggable from 'react-draggable';
@@ -29,7 +29,15 @@ const LiveChat = ({ isDark, onClose, selectedContact: initialSelectedContact }) 
     { id: 3, name: 'Test User3', phone: '+16267888832', time: 'Just now', status: 'Pending' },
   ]);
   const [isAddContactModalOpen, setIsAddContactModalOpen] = useState(false);
-  const [newContact, setNewContact] = useState({ name: '', phone: '' });
+  const [newContact, setNewContact] = useState({
+    firstName: '',
+    lastName: '',
+    phone: '',
+    email: '',
+    leadSource: '',
+    market: '',
+    product: ''
+  });
   const [isConnected, setIsConnected] = useState(false);
   const [windowSize, setWindowSize] = useState({ width: 800, height: 600 });
   const [isResizing, setIsResizing] = useState(false);
@@ -222,38 +230,149 @@ const LiveChat = ({ isDark, onClose, selectedContact: initialSelectedContact }) 
     }
   };
 
-  const handleAddContact = () => {
-    if (!newContact.name || !newContact.phone) {
+  const handleAddContact = async (contactData) => {
+    try {
+      // Create the contact
+      const contact = {
+        id: contacts.length + 1,
+        name: `${contactData.firstName} ${contactData.lastName}`.trim(),
+        phone: contactData.phone,
+        email: contactData.email,
+        leadSource: contactData.leadSource,
+        market: contactData.market,
+        product: contactData.product,
+        labels: contactData.labels || [],
+        time: 'Just now',
+        status: 'Open'
+      };
+      
+      setContacts(prev => [...prev, contact]);
+      setIsAddContactModalOpen(false);
+      setNewContact({
+        firstName: '',
+        lastName: '',
+        phone: '',
+        email: '',
+        leadSource: '',
+        market: '',
+        product: ''
+      });
+
+      toast({
+        title: 'Contact Added',
+        description: `${contact.name} has been added to your contacts`,
+        status: 'success',
+        duration: 3000,
+      });
+
+      return contact;
+    } catch (error) {
+      console.error('Error adding contact:', error);
       toast({
         title: 'Error',
-        description: 'Please fill in both name and phone number',
+        description: 'Failed to add contact. Please try again.',
         status: 'error',
         duration: 3000,
       });
-      return;
+      throw error;
     }
+  };
 
-    const newContactData = {
-      id: contacts.length + 1,
-      name: newContact.name,
-      phone: newContact.phone,
-      avatar: newContact.name.split(' ').map(n => n[0]).join('').toUpperCase(),
-      lastMessage: 'No messages yet',
-      time: 'Just now',
-      status: 'Open'
-    };
+  const handleCreateOpportunity = async (opportunity) => {
+    try {
+      // Add opportunity to pipeline
+      const pipelineCard = {
+        id: `card-${Date.now()}`,
+        name: opportunity.contactName,
+        phone: opportunity.contactPhone,
+        lastMessage: opportunity.title,
+        time: 'Just now',
+        priority: 'high',
+        type: 'opportunity',
+        value: opportunity.value,
+        service: opportunity.service,
+        stage: opportunity.stage,
+        notes: opportunity.notes
+      };
 
-    setContacts(prev => [...prev, newContactData]);
-    setNewContact({ name: '', phone: '' });
-    setIsAddContactModalOpen(false);
-    setSelectedPhone(newContactData.phone);
+      // Update pipeline data
+      setContacts(prev => prev.map(contact => 
+        contact.phone === opportunity.contactPhone 
+          ? { ...contact, labels: [...(contact.labels || []), 'opportunity'] }
+          : contact
+      ));
 
-    toast({
-      title: 'Contact added',
-      description: `${newContactData.name} has been added to your contacts`,
-      status: 'success',
-      duration: 3000,
-    });
+      toast({
+        title: 'Opportunity Created',
+        description: `New opportunity added to pipeline: ${opportunity.title}`,
+        status: 'success',
+        duration: 3000,
+      });
+    } catch (error) {
+      console.error('Error creating opportunity:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to create opportunity. Please try again.',
+        status: 'error',
+        duration: 3000,
+      });
+    }
+  };
+
+  const handleScheduleAppointment = async (appointment) => {
+    try {
+      // Add appointment to calendar
+      const calendarEvent = {
+        id: appointment.id,
+        title: `${appointment.type} with ${appointment.contactName}`,
+        start: `${appointment.date}T${appointment.time}`,
+        end: `${appointment.date}T${appointment.time.split(':')[0]}:${
+          parseInt(appointment.time.split(':')[1]) + 30
+        }`,
+        description: appointment.notes,
+        type: appointment.type,
+        contactId: appointment.contactId,
+        contactName: appointment.contactName,
+        contactPhone: appointment.contactPhone
+      };
+
+      // TODO: Update calendar component with new event
+      console.log('Calendar event created:', calendarEvent);
+
+      // Add to pipeline as well
+      const pipelineCard = {
+        id: `card-${Date.now()}`,
+        name: appointment.contactName,
+        phone: appointment.contactPhone,
+        lastMessage: `${appointment.type} scheduled for ${appointment.date} at ${appointment.time}`,
+        time: 'Just now',
+        priority: 'medium',
+        type: 'appointment',
+        appointmentDetails: appointment
+      };
+
+      // Update pipeline data
+      setContacts(prev => prev.map(contact => 
+        contact.phone === appointment.contactPhone 
+          ? { ...contact, labels: [...(contact.labels || []), 'appointment'] }
+          : contact
+      ));
+
+      toast({
+        title: 'Appointment Scheduled',
+        description: `${appointment.type} scheduled with ${appointment.contactName}`,
+        status: 'success',
+        duration: 3000,
+      });
+    } catch (error) {
+      console.error('Error scheduling appointment:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to schedule appointment. Please try again.',
+        status: 'error',
+        duration: 3000,
+      });
+    }
   };
 
   const handleStatusChange = (newStatus) => {
@@ -421,6 +540,8 @@ const LiveChat = ({ isDark, onClose, selectedContact: initialSelectedContact }) 
           onClose={() => setIsAddContactModalOpen(false)}
           onNewContactChange={setNewContact}
           onAddContact={handleAddContact}
+          onCreateOpportunity={handleCreateOpportunity}
+          onScheduleAppointment={handleScheduleAppointment}
           newContact={newContact}
         />
       </Box>

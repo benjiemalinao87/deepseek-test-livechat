@@ -156,6 +156,64 @@
    - Optimized re-renders with proper dependency arrays
    - Lazy loading of tab content
 
+## Component Integration and Data Flow (January 30, 2025)
+
+**Context**: Implementing label management in a contact system with multiple interconnected components (LabelManager, AddContactModal, ContactCard).
+
+**Key Technical Learnings**:
+
+1. **Data Structure Transformation**:
+   - Different components may need different data structures for the same conceptual data
+   - Transform data at component boundaries rather than forcing one structure everywhere
+   - Example: LabelManager needed rich objects `{id, text, color}` for management, while ContactCard needed simple strings for display
+
+2. **Component Communication**:
+   - Props should be explicit about their data requirements
+   - Use TypeScript or PropTypes to catch data mismatches early
+   - Document expected data structures in component comments
+
+3. **Defensive Programming**:
+   - Always validate data before using it (e.g., `Array.isArray()` check)
+   - Provide fallback values for optional properties
+   - Handle edge cases gracefully (undefined, null, empty arrays)
+
+4. **UI Considerations**:
+   - Consider how UI elements will behave with different amounts of data
+   - Use flexible layouts (`flexWrap`) for dynamic content
+   - Maintain consistent styling across related components
+   - Follow platform design guidelines (macOS in this case)
+
+5. **State Management**:
+   - Keep state transformations close to where the state is used
+   - Use clear naming conventions for state variables and handlers
+   - Consider the full lifecycle of state (creation, update, display)
+
+**Process Learnings**:
+
+1. **Debugging Approach**:
+   - Start by understanding the data flow
+   - Check each transformation point
+   - Use console.log or debugger to track data changes
+   - Focus on one component at a time
+
+2. **Code Organization**:
+   - Keep related functionality together
+   - Split complex components into smaller, focused pieces
+   - Use consistent patterns across similar components
+
+3. **Testing Strategy**:
+   - Test with various data scenarios (empty, single item, multiple items)
+   - Verify both happy path and edge cases
+   - Check visual appearance with different data loads
+
+**Best Practices Reinforced**:
+
+1. Single Responsibility Principle: Each component handles one aspect of the functionality
+2. Data Transformation at Boundaries: Clean data handoffs between components
+3. Defensive Programming: Never assume data will be in the expected format
+4. User Experience: Consider how changes affect the end user
+5. Maintainability: Write clear, documented code that others can understand
+
 ## Window Management
 ### Best Practices
 1. **Component Hierarchy**
@@ -245,7 +303,60 @@
    - Use try-catch for animation calculations
    - Test edge cases 
 
-   # Lessons Learned
+## Label Management in Contact System
+
+**Issue**: Labels weren't appearing in the contact list after being added to a new contact.
+
+**Root Cause**: Mismatch between label data structures in different components:
+- LabelManager was creating rich label objects with `{ id, text, color }`
+- ContactCard was expecting an array of simple label strings
+
+**Solution**:
+1. Modified AddContactModal to extract just the label text before saving
+2. Updated ContactCard to:
+   - Safely handle undefined labels with Array.isArray()
+   - Use flexWrap for better label display
+   - Apply consistent color schemes
+
+**Key Learnings**:
+1. Always ensure data structure consistency between components
+2. Use data transformation at the boundaries (e.g., when passing data between components)
+3. Add safety checks for undefined/null values
+4. Consider UI layout implications (like wrapping) when dealing with dynamic content
+
+## Case Sensitivity in File Names Across Different Environments (January 30, 2025)
+
+**Issue:**
+Deployment failed on Railway with the error: "Module not found: Error: Can't resolve './components/livechat/LiveChat'"
+
+**Root Cause:**
+- macOS (local development) is case-insensitive with filenames
+- Linux (Railway deployment) is case-sensitive with filenames
+- This caused issues when:
+  1. Physical file was named `LiveChat.js` (uppercase)
+  2. Git tracked it as `livechat.js` (lowercase)
+  3. Import statement used `livechat.js` (lowercase)
+
+**Solution:**
+1. Renamed the physical file to match git and import statements
+2. Ensured consistent lowercase naming across all files
+3. Updated import statements to match exact case
+
+**Key Learnings:**
+1. Always maintain consistent file naming conventions, preferably lowercase
+2. Be aware of case sensitivity differences between development and deployment environments
+3. When encountering module resolution errors:
+   - Check file name case matches exactly
+   - Verify git tracking matches physical files
+   - Ensure import statements match actual file names
+4. Use `git mv` for renaming files to maintain git history
+5. Test builds locally before deployment to catch case sensitivity issues
+
+**Prevention:**
+- Use lowercase for all file names to avoid case sensitivity issues
+- Implement a pre-commit hook to enforce consistent file naming
+- Always verify file names match exactly in imports
+- Consider using a linter rule to enforce consistent import paths
 
 ## Weekly Performance Tracking (January 30, 2025)
 

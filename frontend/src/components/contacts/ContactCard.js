@@ -26,13 +26,13 @@ const StatusBadge = ({ status }) => {
 
   return (
     <Badge
-      colorScheme={statusColors[status]}
+      colorScheme={statusColors[status?.toLowerCase()] || 'gray'}
       variant="subtle"
       size="sm"
       fontSize="xs"
       textTransform="capitalize"
     >
-      {status}
+      {status || 'Unknown'}
     </Badge>
   );
 };
@@ -42,6 +42,16 @@ export const ContactCard = ({ contact }) => {
   const borderColor = useColorModeValue('gray.200', 'gray.700');
   const textColor = useColorModeValue('gray.800', 'white');
   const mutedColor = useColorModeValue('gray.600', 'gray.400');
+
+  // Define label colors
+  const labelColors = {
+    opportunity: 'green',
+    appointment: 'purple',
+    vip: 'red',
+    enterprise: 'blue',
+    technical: 'cyan',
+    default: 'blue'
+  };
 
   return (
     <Box
@@ -69,18 +79,18 @@ export const ContactCard = ({ contact }) => {
           </HStack>
           
           <Text fontSize="xs" color={mutedColor}>
-            {contact.position} at {contact.company}
+            {contact.phone}
           </Text>
           
-          <HStack spacing={2} mt={1}>
-            {contact.tags.map((tag, index) => (
+          <HStack spacing={2} mt={1} flexWrap="wrap">
+            {Array.isArray(contact.labels) && contact.labels.map((label, index) => (
               <Badge
                 key={index}
-                colorScheme="blue"
+                colorScheme={labelColors[label.toLowerCase()] || labelColors.default}
                 variant="subtle"
                 fontSize="xs"
               >
-                {tag}
+                {label}
               </Badge>
             ))}
           </HStack>
@@ -101,7 +111,7 @@ export const ContactCard = ({ contact }) => {
               icon={<Phone size={14} />}
               size="xs"
               variant="ghost"
-              colorScheme="green"
+              colorScheme="blue"
               aria-label="Call"
             />
           </Tooltip>
@@ -110,24 +120,23 @@ export const ContactCard = ({ contact }) => {
               icon={<Mail size={14} />}
               size="xs"
               variant="ghost"
-              colorScheme="purple"
+              colorScheme="blue"
               aria-label="Email"
             />
           </Tooltip>
+          
           <Menu>
             <MenuButton
               as={IconButton}
               icon={<MoreVertical size={14} />}
-              size="xs"
               variant="ghost"
+              size="xs"
               aria-label="More options"
             />
             <MenuList>
-              <MenuItem>View Details</MenuItem>
               <MenuItem>Edit Contact</MenuItem>
-              <MenuItem>Add to Pipeline</MenuItem>
-              <MenuItem>View History</MenuItem>
-              <MenuItem color="red.500">Delete Contact</MenuItem>
+              <MenuItem>Delete Contact</MenuItem>
+              <MenuItem>Add to Group</MenuItem>
             </MenuList>
           </Menu>
         </HStack>
