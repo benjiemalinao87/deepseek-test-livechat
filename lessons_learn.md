@@ -350,6 +350,33 @@ Outbound text messages were failing with a "Failed to fetch" error. The messages
    - Maintain alignment consistency with message direction
    - Small spacing (mt={1}) provides clear separation between message and metadata
 
+## UI Design Principles (2025-01-30)
+
+#### Mac OS Design Philosophy Implementation
+1. **Simplicity First**
+   - Remove unnecessary visual elements (shadows, borders, complex backgrounds)
+   - Use transparent backgrounds instead of solid colors
+   - Maintain consistent spacing and sizing
+   - Keep UI elements minimal but functional
+
+2. **Visual Hierarchy**
+   - Use subtle color variations to indicate state changes
+   - Smaller component sizes for better information density
+   - Group related elements logically
+   - Maintain breathing space between sections
+
+3. **Interactive Elements**
+   - Simple hover states with background color changes
+   - Remove decorative shadows from buttons
+   - Use consistent border radius across components
+   - Keep dropdown menus clean and focused
+
+4. **Responsive Feedback**
+   - Subtle visual feedback on interactions
+   - Clear active states for buttons and menus
+   - Consistent animation timing
+   - Intuitive element placement
+
 ## Toast Notification Update - 2025-01-30
 
 ### Changes Made

@@ -36,17 +36,13 @@ const ContactList = ({
   const [selectedAgent, setSelectedAgent] = useState(null);
 
   const bg = useColorModeValue('gray.50', 'gray.900');
-  const headerBg = useColorModeValue('rgba(255, 255, 255, 0.8)', 'rgba(23, 25, 35, 0.8)');
+  const headerBg = useColorModeValue('rgba(255, 255, 255, 0.9)', 'rgba(23, 25, 35, 0.9)');
   const borderColor = useColorModeValue('gray.100', 'gray.700');
   const textColor = useColorModeValue('gray.800', 'white');
   const mutedTextColor = useColorModeValue('gray.500', 'gray.400');
-  const hoverBg = useColorModeValue('white', 'gray.800');
-  const buttonBg = useColorModeValue('white', 'gray.800');
-  const buttonShadow = useColorModeValue('0 1px 2px rgba(0, 0, 0, 0.05)', '0 1px 2px rgba(255, 255, 255, 0.05)');
-  const dropdownShadow = useColorModeValue(
-    '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-    '0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.2)'
-  );
+  const hoverBg = useColorModeValue('gray.50', 'gray.700');
+  const buttonBg = useColorModeValue('transparent', 'transparent');
+  const activeButtonBg = useColorModeValue('gray.100', 'gray.700');
 
   // Available agents data
   const availableAgents = [
@@ -100,36 +96,36 @@ const ContactList = ({
         top={0}
         zIndex={1}
         backdropFilter="blur(10px)"
-        px={4}
-        py={3}
       >
-        {/* Status and Filter Dropdowns */}
+        {/* Status and Filter Row */}
         <Flex 
           justify="space-between" 
           align="center" 
-          mb={3}
+          px={4}
+          py={3}
+          borderBottom="1px"
+          borderColor={borderColor}
         >
           <Menu>
             <MenuButton
               as={Button}
               rightIcon={<ChevronDownIcon />}
               bg={buttonBg}
-              shadow={buttonShadow}
               _hover={{ bg: hoverBg }}
-              _active={{ bg: hoverBg }}
-              size="md"
-              px={4}
+              _active={{ bg: activeButtonBg }}
+              size="sm"
               fontWeight="medium"
-              borderRadius="xl"
+              color={textColor}
             >
               {statusFilter}
             </MenuButton>
             <MenuList
-              shadow={dropdownShadow}
-              borderRadius="xl"
+              mt={1}
+              borderRadius="md"
               overflow="hidden"
               border="1px"
               borderColor={borderColor}
+              py={1}
             >
               <MenuItem onClick={() => setStatusFilter('Open')}>Open</MenuItem>
               <MenuItem onClick={() => setStatusFilter('Pending')}>Pending</MenuItem>
@@ -140,28 +136,27 @@ const ContactList = ({
             </MenuList>
           </Menu>
 
-          <HStack spacing={3}>
+          <HStack spacing={2}>
             <Menu>
               <MenuButton
                 as={Button}
                 rightIcon={<ChevronDownIcon />}
                 bg={buttonBg}
-                shadow={buttonShadow}
                 _hover={{ bg: hoverBg }}
-                _active={{ bg: hoverBg }}
-                size="md"
-                px={4}
+                _active={{ bg: activeButtonBg }}
+                size="sm"
                 fontWeight="medium"
-                borderRadius="xl"
+                color={textColor}
               >
                 {assignmentFilter}
               </MenuButton>
               <MenuList
-                shadow={dropdownShadow}
-                borderRadius="xl"
+                mt={1}
+                borderRadius="md"
                 overflow="hidden"
                 border="1px"
                 borderColor={borderColor}
+                py={1}
               >
                 <MenuItem onClick={() => setAssignmentFilter('All')}>All</MenuItem>
                 <MenuItem onClick={() => setAssignmentFilter('Me')}>Me</MenuItem>
@@ -171,99 +166,17 @@ const ContactList = ({
             <IconButton
               icon={<BsFilter />}
               bg={buttonBg}
-              shadow={buttonShadow}
               _hover={{ bg: hoverBg }}
-              _active={{ bg: hoverBg }}
-              size="md"
-              borderRadius="xl"
+              _active={{ bg: activeButtonBg }}
+              size="sm"
               aria-label="Additional filters"
             />
           </HStack>
         </Flex>
 
-        {/* Assigned To Section */}
-        <Box mb={3}>
-          <Text fontSize="sm" color={mutedTextColor} mb={2} fontWeight="medium">
-            Assigned to
-          </Text>
-          <Menu>
-            <MenuButton
-              as={Button}
-              variant="outline"
-              p={2}
-              _hover={{ bg: hoverBg }}
-              w="100%"
-              borderRadius="xl"
-              borderColor={borderColor}
-              bg={buttonBg}
-              height="auto"
-              transition="all 0.2s"
-            >
-              <HStack spacing={2} justify="flex-start" w="100%" py={1}>
-                {selectedAgent ? (
-                  <>
-                    <Avatar
-                      size="sm"
-                      name={selectedAgent.name}
-                      bg="green.500"
-                      borderRadius="lg"
-                    >
-                      {selectedAgent.initials}
-                    </Avatar>
-                    <Text fontSize="sm" fontWeight="medium">
-                      {selectedAgent.name}
-                    </Text>
-                  </>
-                ) : (
-                  <Text fontSize="sm" color={mutedTextColor}>
-                    Select an agent
-                  </Text>
-                )}
-              </HStack>
-            </MenuButton>
-            <MenuList
-              shadow={dropdownShadow}
-              borderRadius="xl"
-              overflow="hidden"
-              border="1px"
-              borderColor={borderColor}
-            >
-              {availableAgents.map((agent) => (
-                <MenuItem
-                  key={agent.id}
-                  onClick={() => setSelectedAgent(agent)}
-                  py={2}
-                >
-                  <HStack spacing={2}>
-                    <Avatar
-                      size="sm"
-                      name={agent.name}
-                      bg="green.500"
-                      borderRadius="lg"
-                    >
-                      {agent.initials}
-                    </Avatar>
-                    <Text fontSize="sm" fontWeight="medium">
-                      {agent.name}
-                    </Text>
-                  </HStack>
-                </MenuItem>
-              ))}
-              <Divider my={2} />
-              <MenuItem
-                onClick={() => setSelectedAgent(null)}
-                color="gray.500"
-                py={2}
-              >
-                <Text fontSize="sm">Clear assignment</Text>
-              </MenuItem>
-            </MenuList>
-          </Menu>
-        </Box>
-
-        {/* Search Bar */}
-        <Box>
-          <InputGroup>
+        {/* Search and Assignment Section */}
+        <Box px={4} py={3}>
+          <InputGroup size="sm" mb={4}>
             <InputLeftElement pointerEvents="none">
               <SearchIcon color={mutedTextColor} />
             </InputLeftElement>
@@ -272,7 +185,7 @@ const ContactList = ({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               bg={buttonBg}
-              borderRadius="xl"
+              borderRadius="md"
               borderColor={borderColor}
               _focus={{
                 borderColor: 'blue.400',
@@ -284,6 +197,78 @@ const ContactList = ({
               fontSize="sm"
             />
           </InputGroup>
+
+          <Menu>
+            <MenuButton
+              as={Button}
+              variant="outline"
+              size="sm"
+              w="100%"
+              borderRadius="md"
+              borderColor={borderColor}
+              bg={buttonBg}
+              _hover={{ bg: hoverBg }}
+              _active={{ bg: activeButtonBg }}
+              height="auto"
+              py={2}
+            >
+              <HStack spacing={2} justify="flex-start">
+                {selectedAgent ? (
+                  <>
+                    <Avatar
+                      size="xs"
+                      name={selectedAgent.name}
+                      bg="green.500"
+                    >
+                      {selectedAgent.initials}
+                    </Avatar>
+                    <Text fontSize="sm" fontWeight="medium">
+                      {selectedAgent.name}
+                    </Text>
+                  </>
+                ) : (
+                  <Text fontSize="sm" color={mutedTextColor}>
+                    Assign to agent...
+                  </Text>
+                )}
+              </HStack>
+            </MenuButton>
+            <MenuList
+              mt={1}
+              borderRadius="md"
+              overflow="hidden"
+              border="1px"
+              borderColor={borderColor}
+              py={1}
+            >
+              {availableAgents.map((agent) => (
+                <MenuItem
+                  key={agent.id}
+                  onClick={() => setSelectedAgent(agent)}
+                >
+                  <HStack spacing={2}>
+                    <Avatar
+                      size="xs"
+                      name={agent.name}
+                      bg="green.500"
+                    >
+                      {agent.initials}
+                    </Avatar>
+                    <Text fontSize="sm">
+                      {agent.name}
+                    </Text>
+                  </HStack>
+                </MenuItem>
+              ))}
+              <Divider my={1} />
+              <MenuItem
+                onClick={() => setSelectedAgent(null)}
+                color="gray.500"
+              >
+                <Text fontSize="sm">Clear assignment</Text>
+              </MenuItem>
+            </MenuList>
+          </Menu>
         </Box>
       </Box>
 
