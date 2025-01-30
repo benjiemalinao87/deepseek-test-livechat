@@ -8,24 +8,16 @@ const useContactStore = create((set) => ({
   contacts: [
     {
       id: 1,
-      name: 'Sarah Johnson',
-      phone: '+1 (555) 123-4567',
+      name: 'Benjie Malinao',
+      phone: '+16267888830',
+      email: 'benjie@gmail.com',
+      leadSource: 'homebuddy',
       status: 'Active',
       conversationStatus: 'Open',
       labels: ['VIP', 'Enterprise'],
       lastMessage: null,
       lastMessageTime: null,
-    },
-    {
-      id: 2,
-      name: 'Michael Chen',
-      phone: '+1 (555) 234-5678',
-      status: 'Busy',
-      conversationStatus: 'Pending',
-      labels: ['Technical'],
-      lastMessage: null,
-      lastMessageTime: null,
-    },
+    }
   ],
 
   currentFilter: 'All',
